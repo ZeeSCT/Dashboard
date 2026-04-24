@@ -1,1 +1,113 @@
-import KpiCard from '@/components/shared/KpiCard'; import DataTable from '@/components/shared/DataTable'; import StatusBadge from '@/components/shared/StatusBadge'; function ListPanel({items}){return <div>{items.map((item,index)=><div key={index} className='listItem'><div className='listDot' style={{background:item.color||'var(--blue)'}} /><div><div className='listTitle'>{item.title}</div>{item.meta?<div className='listMeta'>{item.meta}</div>:null}</div></div>)}</div>;} function SummaryPanel({items}){return <div style={{display:'grid',gap:10}}>{items.map((item,index)=><div key={index}><div style={{display:'flex',justifyContent:'space-between',marginBottom:6,fontSize:13}}><strong>{item.label}</strong>{item.badge?<StatusBadge tone={item.badge.tone}>{item.badge.label}</StatusBadge>:<span>{item.value}</span>}</div>{typeof item.progress==='number'?<div className='progressTrack'><div className='progressFill' style={{width:`${item.progress}%`,background:item.color||'var(--green)'}} /></div>:null}{item.meta?<div className='listMeta'>{item.meta}</div>:null}</div>)}</div>;} export default function ScreenRenderer({screen}){return <div>{screen.meta?<div className='metaRow'>{screen.meta.badge?<StatusBadge tone={screen.meta.badge.tone}>{screen.meta.badge.label}</StatusBadge>:null}{screen.meta.note?<span style={{fontSize:13,color:'var(--muted)'}}>{screen.meta.note}</span>:null}</div>:null}{screen.kpis?.length?<div className='kpiGrid'>{screen.kpis.map(item=><KpiCard key={item.label} {...item} />)}</div>:null}{screen.topPanels?.length?<div className='gridTwo'>{screen.topPanels.map((panel,idx)=><div key={idx} className='panel'><div className='panelTitle'><span>{panel.title}</span></div>{panel.type==='list'?<ListPanel items={panel.items||[]} />:null}{panel.type==='summary'?<SummaryPanel items={panel.items||[]} />:null}</div>)}</div>:null}{screen.tables?.map((table,idx)=><div key={idx} className='panel'><div className='panelTitle'><span>{table.title}</span>{table.subtitle?<span>{table.subtitle}</span>:null}</div><DataTable columns={table.columns} rows={table.rows} /></div>)}</div>;}
+import KpiCard from "@/components/shared/KpiCard";
+import DataTable from "@/components/shared/DataTable";
+import StatusBadge from "@/components/shared/StatusBadge";
+function ListPanel({ items }) {
+  return (
+    <div>
+      {items.map((item, index) => (
+        <div key={index} className="listItem">
+          <div
+            className="listDot"
+            style={{ background: item.color || "var(--blue)" }}
+          />
+          <div>
+            <div className="listTitle">{item.title}</div>
+            {item.meta ? <div className="listMeta">{item.meta}</div> : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function SummaryPanel({ items }) {
+  return (
+    <div style={{ display: "grid", gap: 10 }}>
+      {items.map((item, index) => (
+        <div key={index}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: 6,
+              fontSize: 13,
+            }}
+          >
+            <strong>{item.label}</strong>
+            {item.badge ? (
+              <StatusBadge tone={item.badge.tone}>
+                {item.badge.label}
+              </StatusBadge>
+            ) : (
+              <span>{item.value}</span>
+            )}
+          </div>
+          {typeof item.progress === "number" ? (
+            <div className="progressTrack">
+              <div
+                className="progressFill"
+                style={{
+                  width: `${item.progress}%`,
+                  background: item.color || "var(--green)",
+                }}
+              />
+            </div>
+          ) : null}
+          {item.meta ? <div className="listMeta">{item.meta}</div> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+export default function ScreenRenderer({ screen }) {
+  return (
+    <div>
+      {screen.meta ? (
+        <div className="metaRow">
+          {screen.meta.badge ? (
+            <StatusBadge tone={screen.meta.badge.tone}>
+              {screen.meta.badge.label}
+            </StatusBadge>
+          ) : null}
+          {screen.meta.note ? (
+            <span style={{ fontSize: 13, color: "var(--muted)" }}>
+              {screen.meta.note}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      {screen.kpis?.length ? (
+        <div className="kpiGrid">
+          {screen.kpis.map((item) => (
+            <KpiCard key={item.label} {...item} />
+          ))}
+        </div>
+      ) : null}
+      {screen.topPanels?.length ? (
+        <div className="gridTwo">
+          {screen.topPanels.map((panel, idx) => (
+            <div key={idx} className="panel">
+              <div className="panelTitle">
+                <span>{panel.title}</span>
+              </div>
+              {panel.type === "list" ? (
+                <ListPanel items={panel.items || []} />
+              ) : null}
+              {panel.type === "summary" ? (
+                <SummaryPanel items={panel.items || []} />
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {screen.tables?.map((table, idx) => (
+        <div key={idx} className="panel">
+          <div className="panelTitle">
+            <span>{table.title}</span>
+            {table.subtitle ? <span>{table.subtitle}</span> : null}
+          </div>
+          <DataTable columns={table.columns} rows={table.rows} />
+        </div>
+      ))}
+    </div>
+  );
+}
