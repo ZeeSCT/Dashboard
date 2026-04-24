@@ -1,0 +1,1 @@
+export default function AuthShell({title,subtitle,children,footer}){return <div className='authPage'><div className='authCard'><div className='authBrand'>Scientechnic Unified Platform</div><h1 className='authTitle'>{title}</h1>{subtitle?<p className='authSubtitle'>{subtitle}</p>:null}{children}{footer?<div className='authFooter'>{footer}</div>:null}</div></div>;}

@@ -1,0 +1,1 @@
+export default function ProgressCell({value=0,color='var(--green)'}){return <div style={{display:'flex',alignItems:'center',gap:8}}><div className='progressTrack' style={{width:70}}><div className='progressFill' style={{width:`${value}%`,background:color}} /></div><span>{value}%</span></div>;}

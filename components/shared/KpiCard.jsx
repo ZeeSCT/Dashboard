@@ -1,0 +1,1 @@
+export default function KpiCard({label,value,subtext}){return <div className='kpiCard'><div className='kpiLabel'>{label}</div><div className='kpiValue'>{value}</div>{subtext?<div className='kpiSub'>{subtext}</div>:null}</div>;}
