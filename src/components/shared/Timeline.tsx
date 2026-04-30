@@ -1,0 +1,1 @@
+export default function Timeline({items}:{items:{title:string;date:string;progress:number}[]}){return <div className="timeline">{items.map(i=><div className="timeline-row" key={i.title}><strong>{i.title}</strong><div className="timeline-track"><span style={{width:`${i.progress}%`}}/></div><small>{i.date}</small></div>)}</div>}

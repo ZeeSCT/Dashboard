@@ -1,0 +1,271 @@
+import type { NavigationModule } from "@/data/screens";
+export const navigation: NavigationModule[] = [
+  {
+    key: "executive",
+    number: "01",
+    title: "EXECUTIVE",
+    items: [
+      {
+        key: "portfolio",
+        number: "1.1",
+        title: "Portfolio overview",
+        color: "blue",
+      },
+      { key: "health", number: "1.2", title: "Project health", color: "green" },
+      {
+        key: "billing",
+        number: "1.3",
+        title: "Revenue & billing",
+        color: "amber",
+      },
+      {
+        key: "approvals",
+        number: "1.4",
+        title: "Approval bottlenecks",
+        color: "red",
+      },
+      {
+        key: "docstatus",
+        number: "1.5",
+        title: "Documentation status",
+        color: "purple",
+      },
+      {
+        key: "drilldown",
+        number: "1.6",
+        title: "Project drill-down",
+        color: "gray",
+      },
+    ],
+  },
+  {
+    key: "tender",
+    number: "02",
+    title: "TENDER MANAGEMENT",
+    items: [
+      {
+        key: "tender-pipeline",
+        number: "2.1",
+        title: "Tender pipeline",
+        color: "purple",
+      },
+      {
+        key: "tender-enquiry",
+        number: "2.2",
+        title: "Enquiry register",
+        color: "blue",
+      },
+      {
+        key: "tender-bid",
+        number: "2.3",
+        title: "Bid analysis",
+        color: "teal",
+      },
+      {
+        key: "tender-costing",
+        number: "2.4",
+        title: "Costing & pricing",
+        color: "amber",
+      },
+      {
+        key: "tender-risk",
+        number: "2.5",
+        title: "Risk assessment",
+        color: "red",
+      },
+      {
+        key: "tender-approval",
+        number: "2.6",
+        title: "Tender approvals",
+        color: "amber",
+      },
+      {
+        key: "tender-submit",
+        number: "2.7",
+        title: "Submission tracker",
+        color: "teal",
+      },
+      {
+        key: "tender-wonlost",
+        number: "2.8",
+        title: "Won / lost register",
+        color: "green",
+      },
+    ],
+  }
+//   {
+//     key: "project",
+//     number: "03",
+//     title: "PROJECT MANAGEMENT",
+//     items: [
+//       {
+//         key: "workspace",
+//         number: "3.1",
+//         title: "Project workspace",
+//         color: "blue",
+//       },
+//       {
+//         key: "milestones",
+//         number: "3.2",
+//         title: "Milestone tracker",
+//         color: "teal",
+//       },
+//       {
+//         key: "packages",
+//         number: "3.3",
+//         title: "Work package tracker",
+//         color: "amber",
+//       },
+//       {
+//         key: "siteprog",
+//         number: "3.4",
+//         title: "Site progress view",
+//         color: "green",
+//       },
+//       {
+//         key: "taskboard",
+//         number: "3.5",
+//         title: "Task & assignment board",
+//         color: "purple",
+//       },
+//       {
+//         key: "risks",
+//         number: "3.6",
+//         title: "Risk / issue / blocker",
+//         color: "red",
+//       },
+//       {
+//         key: "docready",
+//         number: "3.7",
+//         title: "Document readiness",
+//         color: "blue",
+//       },
+//       {
+//         key: "appfollow",
+//         number: "3.8",
+//         title: "Approval follow-up",
+//         color: "amber",
+//       },
+//       {
+//         key: "inspfollow",
+//         number: "3.9",
+//         title: "Inspection follow-up",
+//         color: "teal",
+//       },
+//       {
+//         key: "material",
+//         number: "3.10",
+//         title: "Material & resource",
+//         color: "green",
+//       },
+//       {
+//         key: "commercial",
+//         number: "3.11",
+//         title: "Commercial progress",
+//         color: "purple",
+//       },
+//       {
+//         key: "plan-overview",
+//         number: "3.12",
+//         title: "Planning overview",
+//         color: "blue",
+//       },
+//       {
+//         key: "plan-wbs",
+//         number: "3.13",
+//         title: "WBS timeline",
+//         color: "purple",
+//       },
+//       {
+//         key: "plan-milestones",
+//         number: "3.14",
+//         title: "Milestone register",
+//         color: "teal",
+//       },
+//       {
+//         key: "plan-activities",
+//         number: "3.15",
+//         title: "Activity register",
+//         color: "blue",
+//       },
+//       {
+//         key: "plan-critical",
+//         number: "3.16",
+//         title: "Critical / float view",
+//         color: "red",
+//       },
+//       {
+//         key: "plan-resources",
+//         number: "3.17",
+//         title: "Resource plan",
+//         color: "amber",
+//       },
+//       {
+//         key: "plan-lookahead",
+//         number: "3.18",
+//         title: "Monthly lookahead",
+//         color: "green",
+//       },
+//     ],
+//   },
+//   {
+//     key: "qa",
+//     number: "04",
+//     title: "QA / QC",
+//     items: [
+//       {
+//         key: "qainspections",
+//         number: "4.1",
+//         title: "Inspection register",
+//         color: "teal",
+//       },
+//       { key: "qancr", number: "4.2", title: "NCR log", color: "red" },
+//       {
+//         key: "qapunchlist",
+//         number: "4.3",
+//         title: "Punch list",
+//         color: "amber",
+//       },
+//     ],
+//   },
+//   {
+//     key: "procurement",
+//     number: "05",
+//     title: "PROCUREMENT",
+//     items: [
+//       {
+//         key: "proc-mr",
+//         number: "5.1",
+//         title: "Material requests",
+//         color: "blue",
+//       },
+//       { key: "proc-rfq", number: "5.2", title: "RFQ tracker", color: "amber" },
+//       { key: "proc-po", number: "5.3", title: "PO register", color: "green" },
+//     ],
+//   },
+//   {
+//     key: "maintenance",
+//     number: "06",
+//     title: "MAINTENANCE",
+//     items: [
+//       {
+//         key: "maint-dash",
+//         number: "6.1",
+//         title: "Maintenance dashboard",
+//         color: "purple",
+//       },
+//       {
+//         key: "maint-pm",
+//         number: "6.2",
+//         title: "Preventive tasks",
+//         color: "teal",
+//       },
+//       {
+//         key: "maint-cm",
+//         number: "6.3",
+//         title: "Corrective tasks",
+//         color: "red",
+//       },
+//     ],
+//   },
+];

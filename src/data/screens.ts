@@ -1,0 +1,112 @@
+export type ScreenKey =
+  | "portfolio"
+  | "health"
+  | "billing"
+  | "approvals"
+  | "docstatus"
+  | "drilldown"
+  | "tender-pipeline"
+  | "tender-enquiry"
+  | "tender-bid"
+  | "tender-costing"
+  | "tender-risk"
+  | "tender-approval"
+  | "tender-submit"
+  | "tender-wonlost"
+  | "workspace"
+  | "milestones"
+  | "packages"
+  | "siteprog"
+  | "taskboard"
+  | "risks"
+  | "docready"
+  | "appfollow"
+  | "inspfollow"
+  | "material"
+  | "commercial"
+  | "plan-overview"
+  | "plan-wbs"
+  | "plan-milestones"
+  | "plan-activities"
+  | "plan-critical"
+  | "plan-resources"
+  | "plan-lookahead"
+  | "qainspections"
+  | "qancr"
+  | "qapunchlist"
+  | "proc-mr"
+  | "proc-rfq"
+  | "proc-po"
+  | "maint-dash"
+  | "maint-pm"
+  | "maint-cm";
+export type ModuleKey =
+  | "executive"
+  | "tender"
+  | "project"
+  | "qa"
+  | "procurement"
+  | "maintenance";
+export type ColorKey =
+  | "blue"
+  | "green"
+  | "amber"
+  | "red"
+  | "purple"
+  | "teal"
+  | "gray";
+export interface NavigationItem {
+  key: ScreenKey;
+  number: string;
+  title: string;
+  color: ColorKey;
+}
+export interface NavigationModule {
+  key: ModuleKey;
+  number: string;
+  title: string;
+  items: NavigationItem[];
+}
+export const screenTitles: Record<ScreenKey, string> = {
+  portfolio: "Portfolio overview",
+  health: "Project health",
+  billing: "Revenue & billing",
+  approvals: "Approval bottlenecks",
+  docstatus: "Documentation status",
+  drilldown: "Project drill-down",
+  "tender-pipeline": "Tender pipeline",
+  "tender-enquiry": "Enquiry register",
+  "tender-bid": "Bid analysis",
+  "tender-costing": "Costing & pricing",
+  "tender-risk": "Risk assessment",
+  "tender-approval": "Tender approvals",
+  "tender-submit": "Submission tracker",
+  "tender-wonlost": "Won / lost register",
+  workspace: "Project workspace",
+  milestones: "Milestone tracker",
+  packages: "Work package tracker",
+  siteprog: "Site progress view",
+  taskboard: "Task & assignment board",
+  risks: "Risk / issue / blocker",
+  docready: "Document readiness",
+  appfollow: "Approval follow-up",
+  inspfollow: "Inspection follow-up",
+  material: "Material & resource",
+  commercial: "Commercial progress",
+  "plan-overview": "Planning overview",
+  "plan-wbs": "WBS timeline",
+  "plan-milestones": "Milestone register",
+  "plan-activities": "Activity register",
+  "plan-critical": "Critical / float view",
+  "plan-resources": "Resource plan",
+  "plan-lookahead": "Monthly lookahead",
+  qainspections: "Inspection register",
+  qancr: "NCR log",
+  qapunchlist: "Punch list",
+  "proc-mr": "Material requests",
+  "proc-rfq": "RFQ tracker",
+  "proc-po": "PO register",
+  "maint-dash": "Maintenance dashboard",
+  "maint-pm": "Preventive tasks",
+  "maint-cm": "Corrective tasks",
+};

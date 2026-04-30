@@ -1,0 +1,3 @@
+import Badge from './Badge';import ProgressBar from './ProgressBar';import type { ColorKey } from '@/data/screens';
+export interface DataTableRow{name:string;owner:string;progress:number;status:string;color:ColorKey;amount:string}
+export default function DataTable({rows}:{rows:DataTableRow[]}){return <table className="data-table"><thead><tr><th>Name</th><th>Owner</th><th>Progress</th><th>Status</th><th>Value</th></tr></thead><tbody>{rows.map(r=><tr key={r.name}><td>{r.name}</td><td>{r.owner}</td><td><ProgressBar value={r.progress} color={r.color}/></td><td><Badge color={r.color}>{r.status}</Badge></td><td>{r.amount}</td></tr>)}</tbody></table>}
