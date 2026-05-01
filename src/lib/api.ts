@@ -19,6 +19,10 @@ export const API_BASE_URL: string =
 /* TYPES */
 /* ================================== */
 
+/* ================================== */
+/* Portfolio STATUS TYPES */
+/* ================================== */
+
 export type PortfolioCategoryCode =
   | "all"
   | "its"
@@ -127,6 +131,78 @@ export interface PortfolioOverviewResponse {
   healthStatus: PortfolioOverviewHealthStatus;
   topIssues: PortfolioTopIssue[];
   projects: PortfolioOverviewProject[];
+}
+
+/* ================================== */
+/* DOCUMENTATION STATUS TYPES */
+/* ================================== */
+
+export type DocumentationStage =
+  | "pre-construction"
+  | "design"
+  | "procurement"
+  | "construction"
+  | "testing-commissioning"
+  | "closeout";
+
+export type DocumentationStatusLabel =
+  | "Approved"
+  | "Under review"
+  | "In preparation"
+  | "Overdue"
+  | "Rejected"
+  | "At risk";
+
+export interface DocumentationStatusKpis {
+  totalDocuments: number;
+  approved: number;
+  underReview: number;
+  overdue: number;
+  inPreparation: number;
+  rejected: number;
+  atRisk: number;
+}
+
+export interface DocumentationStatusSummaryItem {
+  label: DocumentationStatusLabel;
+  value: number;
+  percent: number;
+}
+
+export interface DocumentationOverdueApproval {
+  id: string;
+  project: string;
+  document: string;
+  title: string;
+  approver: string;
+  status: DocumentationStatusLabel;
+  days: number;
+  severity: "danger" | "warning";
+}
+
+export interface DocumentationRegisterItem {
+  id: string;
+  categoryCode: PortfolioCategoryCode;
+  categoryName: string;
+  document: string;
+  project: string;
+  revision: string;
+  submitted: string;
+  approver: string;
+  status: DocumentationStatusLabel;
+  count: number;
+  overdueDays: number | null;
+}
+
+export interface DocumentationStatusResponse {
+  selectedCategory: PortfolioCategoryCode;
+  selectedCategoryLabel: string;
+  selectedStage: DocumentationStage;
+  selectedStageLabel: string;
+  kpis: DocumentationStatusKpis;
+  statusSummary: DocumentationStatusSummaryItem[];
+  overdueApprovals: DocumentationOverdueApproval[];
+  register: DocumentationRegisterItem[];
 }
 
 /* ================================== */
@@ -251,6 +327,26 @@ export const portfolioOverviewApi = {
 };
 
 /* ================================== */
+/* DOCUMENTATION STATUS API */
+/* ================================== */
+
+export const documentationStatusApi = {
+  getStatus: (
+    category: PortfolioCategoryCode = "all",
+    stage: DocumentationStage = "pre-construction"
+  ) => {
+    const query = new URLSearchParams({
+      category,
+      stage,
+    });
+
+    return request<DocumentationStatusResponse>(
+      `/executive/documentation-status?${query.toString()}`
+    );
+  },
+};
+
+/* ================================== */
 /* REACT QUERY KEYS */
 /* ================================== */
 
@@ -267,6 +363,15 @@ export const portfolioKeys = {
 
   overview: (category: PortfolioCategoryCode) =>
     [...portfolioKeys.all, "overview", category] as const,
+};
+
+export const documentationStatusKeys = {
+  all: ["documentation-status"] as const,
+
+  detail: (
+    category: PortfolioCategoryCode,
+    stage: DocumentationStage
+  ) => [...documentationStatusKeys.all, category, stage] as const,
 };
 
 /* ================================== */
@@ -346,6 +451,22 @@ export function usePortfolioOverview(
   return useQuery({
     queryKey: portfolioKeys.overview(category),
     queryFn: () => portfolioOverviewApi.getOverview(category),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+/* ================================== */
+/* REACT QUERY HOOKS - DOCUMENTATION STATUS */
+/* ================================== */
+
+export function useDocumentationStatus(
+  category: PortfolioCategoryCode = "all",
+  stage: DocumentationStage = "pre-construction"
+) {
+  return useQuery({
+    queryKey: documentationStatusKeys.detail(category, stage),
+    queryFn: () => documentationStatusApi.getStatus(category, stage),
     staleTime: 60 * 1000,
     retry: 1,
   });

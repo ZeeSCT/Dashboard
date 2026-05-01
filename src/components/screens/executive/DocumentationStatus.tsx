@@ -1,5 +1,397 @@
-const html = "<div class=\"scr on\" id=\"screen-docstatus\">\n<div class=\"tabs\">\n<button class=\"tab on\" onclick=\"tabClick(this)\">Pre-construction</button>\n<button class=\"tab\" onclick=\"tabClick(this)\">Design</button>\n<button class=\"tab\" onclick=\"tabClick(this)\">Procurement</button>\n<button class=\"tab\" onclick=\"tabClick(this)\">Construction</button>\n<button class=\"tab\" onclick=\"tabClick(this)\">Testing &amp; commissioning</button>\n<button class=\"tab\" onclick=\"tabClick(this)\">Closeout</button>\n</div>\n<div class=\"kr\">\n<div class=\"kc\"><div class=\"kl\">Total documents</div><div class=\"kv\">142</div></div>\n<div class=\"kc g\"><div class=\"kl\">Approved</div><div class=\"kv\">89</div><div class=\"ks\">63%</div></div>\n<div class=\"kc w\"><div class=\"kl\">Under review</div><div class=\"kv\">28</div><div class=\"ks\">20%</div></div>\n<div class=\"kc d\"><div class=\"kl\">Overdue</div><div class=\"kv\">11</div><div class=\"ks\">8%</div></div>\n<div class=\"kc\"><div class=\"kl\">In preparation</div><div class=\"kv\">14</div></div>\n</div>\n<div class=\"gr c2\">\n<div class=\"cd\">\n<div class=\"ch\">Status summary</div>\n<div style=\"display:flex;flex-direction:column;gap:8px\">\n<div><div class=\"pl\"><span>Approved</span><span style=\"font-weight:500\">89</span></div><div class=\"bw\"><div class=\"bf bfg\" style=\"width:63%\"></div></div></div>\n<div><div class=\"pl\"><span>Under review</span><span style=\"font-weight:500\">28</span></div><div class=\"bw\"><div class=\"bf bfb\" style=\"width:20%\"></div></div></div>\n<div><div class=\"pl\"><span>In preparation</span><span style=\"font-weight:500\">14</span></div><div class=\"bw\"><div class=\"bf\" style=\"width:10%;background:#888780\"></div></div></div>\n<div><div class=\"pl\"><span>Overdue</span><span style=\"font-weight:500\">11</span></div><div class=\"bw\"><div class=\"bf bfr\" style=\"width:8%\"></div></div></div>\n<div><div class=\"pl\"><span>Rejected</span><span style=\"font-weight:500\">3</span></div><div class=\"bw\"><div class=\"bf bfa\" style=\"width:2%\"></div></div></div>\n</div>\n</div>\n<div class=\"cd\">\n<div class=\"ch\">Overdue approvals</div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--rd)\"></div><div><div style=\"font-weight:500\">Al Barsha MEP \u2014 Permit drawings</div><div style=\"color:var(--t2);font-size:12px\">18 days \u2014 Authority</div></div></div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--rd)\"></div><div><div style=\"font-weight:500\">DAFZA Ph.2 \u2014 Soil report Rev.2</div><div style=\"color:var(--t2);font-size:12px\">14 days \u2014 Consultant</div></div></div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--am)\"></div><div><div style=\"font-weight:500\">JLT Tower \u2014 Fire strategy doc</div><div style=\"color:var(--t2);font-size:12px\">9 days \u2014 Client sign-off</div></div></div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--am)\"></div><div><div style=\"font-weight:500\">Mirdif Villa \u2014 NOC submission</div><div style=\"color:var(--t2);font-size:12px\">7 days \u2014 Authority</div></div></div>\n</div>\n</div>\n<div class=\"cd\">\n<div class=\"ch\">Document register</div>\n<table><thead><tr><th>Document</th><th>Project</th><th>Rev.</th><th>Submitted</th><th>Approver</th><th>Status</th></tr></thead>\n<tbody>\n<tr><td>Permit drawings set A</td><td>Al Barsha MEP</td><td>R03</td><td>17 Mar</td><td>Authority</td><td><span class=\"b br\">Overdue</span></td></tr>\n<tr><td>Soil investigation report</td><td>DAFZA Ph.2</td><td>R02</td><td>22 Mar</td><td>Consultant</td><td><span class=\"b br\">Overdue</span></td></tr>\n<tr><td>Fire strategy document</td><td>JLT Tower</td><td>R01</td><td>27 Mar</td><td>Client</td><td><span class=\"b ba\">At risk</span></td></tr>\n<tr><td>Project execution plan</td><td>Business Bay</td><td>R02</td><td>1 Apr</td><td>Client</td><td><span class=\"b bb\">Under review</span></td></tr>\n<tr><td>BIM execution plan</td><td>DIP Warehouse</td><td>R01</td><td>2 Apr</td><td>Consultant</td><td><span class=\"b bb\">Under review</span></td></tr>\n<tr><td>HSE Plan Rev.3</td><td>Mirdif Villa</td><td>R03</td><td>20 Feb</td><td>Internal</td><td><span class=\"b bg2\">Approved</span></td></tr>\n</tbody></table>\n</div>\n</div>";
+"use client";
 
-export default function DocumentationStatus() {
-  return <div className="html-screen" dangerouslySetInnerHTML={{ __html: html }} />;
+import { useState } from "react";
+import {
+  ApiError,
+  DocumentationOverdueApproval,
+  DocumentationRegisterItem,
+  DocumentationStage,
+  DocumentationStatusLabel,
+  DocumentationStatusSummaryItem,
+  PortfolioCategoryCode,
+  useDocumentationStatus,
+} from "@/lib/api";
+
+type DocumentationStatusProps = {
+  selectedPortfolioCategory?: PortfolioCategoryCode;
+};
+
+type StageTab = {
+  key: DocumentationStage;
+  label: string;
+};
+
+const tabs: StageTab[] = [
+  { key: "pre-construction", label: "Pre-construction" },
+  { key: "design", label: "Design" },
+  { key: "procurement", label: "Procurement" },
+  { key: "construction", label: "Construction" },
+  { key: "testing-commissioning", label: "Testing & commissioning" },
+  { key: "closeout", label: "Closeout" },
+];
+
+const badgeClassByStatus: Record<DocumentationStatusLabel, string> = {
+  Approved: "bg2",
+  "Under review": "bb",
+  "In preparation": "bgr",
+  Overdue: "br",
+  Rejected: "br",
+  "At risk": "ba",
+};
+
+const progressClassByStatus: Partial<Record<DocumentationStatusLabel, string>> =
+  {
+    Approved: "bfg",
+    "Under review": "bfb",
+    Overdue: "bfr",
+    Rejected: "bfr",
+    "At risk": "bfa",
+  };
+
+export default function DocumentationStatus({
+  selectedPortfolioCategory = "all",
+}: DocumentationStatusProps) {
+  const [activeStage, setActiveStage] =
+    useState<DocumentationStage>("pre-construction");
+
+  const { data, isLoading, isError, error } = useDocumentationStatus(
+    selectedPortfolioCategory,
+    activeStage
+  );
+
+  const kpis = data?.kpis ?? {
+    totalDocuments: 0,
+    approved: 0,
+    underReview: 0,
+    overdue: 0,
+    inPreparation: 0,
+    rejected: 0,
+    atRisk: 0,
+  };
+
+  const statusSummary = data?.statusSummary ?? [];
+  const overdueApprovals = data?.overdueApprovals ?? [];
+  const register = data?.register ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="html-screen">
+        <div className="scr on" id="screen-docstatus">
+          <DocumentationTabs
+            activeStage={activeStage}
+            onStageChange={setActiveStage}
+          />
+
+          <div className="cd">
+            <div className="ch">Documentation status</div>
+            <div className="ks">Loading documentation status data...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    const message =
+      error instanceof ApiError || error instanceof Error
+        ? error.message
+        : "Failed to load documentation status.";
+
+    return (
+      <div className="html-screen">
+        <div className="scr on" id="screen-docstatus">
+          <DocumentationTabs
+            activeStage={activeStage}
+            onStageChange={setActiveStage}
+          />
+
+          <div className="cd">
+            <div className="ch">Documentation status</div>
+            <div className="ks" style={{ color: "var(--rd)" }}>
+              {message}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="html-screen">
+      <div className="scr on" id="screen-docstatus">
+        <DocumentationTabs
+          activeStage={activeStage}
+          onStageChange={setActiveStage}
+        />
+
+        <section className="kr">
+          <MetricCard
+            label="Total documents"
+            value={kpis.totalDocuments}
+            subtext={data?.selectedCategoryLabel ?? "Selected portfolio"}
+          />
+
+          <MetricCard
+            label="Approved"
+            value={kpis.approved}
+            subtext={`${getPercent(kpis.approved, kpis.totalDocuments)}%`}
+            tone="g"
+          />
+
+          <MetricCard
+            label="Under review"
+            value={kpis.underReview}
+            subtext={`${getPercent(kpis.underReview, kpis.totalDocuments)}%`}
+            tone="w"
+          />
+
+          <MetricCard
+            label="Overdue"
+            value={kpis.overdue}
+            subtext={`${getPercent(kpis.overdue, kpis.totalDocuments)}%`}
+            tone="d"
+          />
+
+          <MetricCard
+            label="In preparation"
+            value={kpis.inPreparation}
+            subtext={`${getPercent(
+              kpis.inPreparation,
+              kpis.totalDocuments
+            )}%`}
+          />
+        </section>
+
+        <section className="gr c2">
+          <StatusSummaryCard statusSummary={statusSummary} />
+
+          <OverdueApprovalsCard overdueApprovals={overdueApprovals} />
+        </section>
+
+        <DocumentRegisterTable
+          register={register}
+          selectedCategoryLabel={data?.selectedCategoryLabel ?? "Selected portfolio"}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DocumentationTabs({
+  activeStage,
+  onStageChange,
+}: {
+  activeStage: DocumentationStage;
+  onStageChange: (stage: DocumentationStage) => void;
+}) {
+  return (
+    <div className="tabs">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          type="button"
+          className={`tab ${activeStage === tab.key ? "on" : ""}`}
+          onClick={() => onStageChange(tab.key)}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  subtext,
+  tone = "",
+}: {
+  label: string;
+  value: string | number;
+  subtext?: string;
+  tone?: "g" | "w" | "d" | "";
+}) {
+  return (
+    <div className={`kc ${tone}`.trim()}>
+      <div className="kl">{label}</div>
+      <div className="kv">{value}</div>
+      {subtext ? <div className="ks">{subtext}</div> : null}
+    </div>
+  );
+}
+
+function StatusSummaryCard({
+  statusSummary,
+}: {
+  statusSummary: DocumentationStatusSummaryItem[];
+}) {
+  return (
+    <div className="cd">
+      <div className="ch">Status summary</div>
+
+      {statusSummary.length > 0 ? (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          {statusSummary.map((item) => (
+            <div key={item.label}>
+              <div className="pl">
+                <span>{item.label}</span>
+                <span style={{ fontWeight: 500 }}>{item.value}</span>
+              </div>
+
+              <div className="bw">
+                <div
+                  className={`bf ${progressClassByStatus[item.label] ?? ""}`}
+                  style={getProgressBarStyle(item.label, item.percent)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="ks">No document status data found.</div>
+      )}
+    </div>
+  );
+}
+
+function OverdueApprovalsCard({
+  overdueApprovals,
+}: {
+  overdueApprovals: DocumentationOverdueApproval[];
+}) {
+  return (
+    <div className="cd">
+      <div className="ch">Overdue approvals</div>
+
+      {overdueApprovals.length > 0 ? (
+        overdueApprovals.map((item) => (
+          <div className="tr2" key={item.id}>
+            <div
+              className="td2"
+              style={{
+                background:
+                  item.severity === "danger" ? "var(--rd)" : "var(--am)",
+              }}
+            />
+
+            <div>
+              <div style={{ fontWeight: 500 }}>{item.title}</div>
+
+              <div
+                style={{
+                  color: "var(--t2)",
+                  fontSize: 12,
+                }}
+              >
+                {item.days} days — {item.approver}
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="tr2">
+          <div
+            className="td2"
+            style={{
+              background: "var(--gn)",
+            }}
+          />
+
+          <div>
+            <div style={{ fontWeight: 500 }}>No overdue approvals</div>
+            <div
+              style={{
+                color: "var(--t2)",
+                fontSize: 12,
+              }}
+            >
+              Selected portfolio and stage are currently clear
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DocumentRegisterTable({
+  register,
+  selectedCategoryLabel,
+}: {
+  register: DocumentationRegisterItem[];
+  selectedCategoryLabel: string;
+}) {
+  return (
+    <div className="cd">
+      <div className="ch">
+        Document register <span>{selectedCategoryLabel}</span>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Project</th>
+            <th>Rev.</th>
+            <th>Submitted</th>
+            <th>Approver</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {register.map((item) => (
+            <tr key={item.id}>
+              <td>{item.document}</td>
+              <td>{item.project}</td>
+              <td>{item.revision}</td>
+              <td>{item.submitted}</td>
+              <td>{item.approver}</td>
+              <td>
+                <span className={`b ${badgeClassByStatus[item.status]}`}>
+                  {item.status}
+                </span>
+              </td>
+            </tr>
+          ))}
+
+          {register.length === 0 && (
+            <tr>
+              <td colSpan={6}>
+                No documents found for this stage and portfolio category.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function getPercent(value: number, total: number) {
+  if (total === 0) return 0;
+
+  return Math.round((value / total) * 100);
+}
+
+function getProgressBarStyle(
+  status: DocumentationStatusLabel,
+  percent: number
+) {
+  if (status === "In preparation") {
+    return {
+      width: `${percent}%`,
+      background: "#888780",
+    };
+  }
+
+  return {
+    width: `${percent}%`,
+  };
 }

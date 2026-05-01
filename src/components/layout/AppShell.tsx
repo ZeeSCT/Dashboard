@@ -32,9 +32,7 @@ export default function AppShell() {
 
         <div className="cnt">
           <ActiveScreen
-            selectedPortfolioCategory={
-              active === "portfolio" ? selectedPortfolioCategory : undefined
-            }
+            selectedPortfolioCategory={selectedPortfolioCategory}
           />
         </div>
       </div>
