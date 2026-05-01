@@ -13,7 +13,7 @@ import {
 /* ================================== */
 
 export const API_BASE_URL: string =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api/v1";
 
 /* ================================== */
 /* TYPES */
@@ -209,29 +209,29 @@ export const portfolioApi = {
     });
 
     return request<PaginatedResponse<PortfolioCategory>>(
-      `/portfolio-categories?${query.toString()}`
+      `/executive/portfolio-categories?${query.toString()}`
     );
   },
 
   getOne: (id: string | number) =>
-    request<PortfolioCategory>(`/portfolio-categories/${id}`),
+    request<PortfolioCategory>(`/executive/portfolio-categories/${id}`),
 
-  create: (payload: Partial<PortfolioCategory>) =>
-    request<PortfolioCategory>("/portfolio-categories", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+  // create: (payload: Partial<PortfolioCategory>) =>
+  //   request<PortfolioCategory>("executive/portfolio-categories", {
+  //     method: "POST",
+  //     body: JSON.stringify(payload),
+  //   }),
 
-  update: (id: string | number, payload: Partial<PortfolioCategory>) =>
-    request<PortfolioCategory>(`/portfolio-categories/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    }),
+  // update: (id: string | number, payload: Partial<PortfolioCategory>) =>
+  //   request<PortfolioCategory>(`executive/portfolio-categories/${id}`, {
+  //     method: "PATCH",
+  //     body: JSON.stringify(payload),
+  //   }),
 
-  remove: (id: string | number) =>
-    request<PortfolioCategory>(`/portfolio-categories/${id}`, {
-      method: "DELETE",
-    }),
+  // remove: (id: string | number) =>
+  //   request<PortfolioCategory>(`executive/portfolio-categories/${id}`, {
+  //     method: "DELETE",
+  //   }),
 };
 
 /* ================================== */
@@ -245,7 +245,7 @@ export const portfolioOverviewApi = {
     });
 
     return request<PortfolioOverviewResponse>(
-      `/portfolio-overview?${query.toString()}`
+      `/executive/portfolio-overview?${query.toString()}`
     );
   },
 };
@@ -291,50 +291,50 @@ export function usePortfolioCategories(
   });
 }
 
-/* Optional alias if older files use this name */
-export const getPortfolioCategories = usePortfolioCategories;
+// /* Optional alias if older files use this name */
+// export const getPortfolioCategories = usePortfolioCategories;
 
-export function useCreatePortfolioCategory() {
-  const qc = useQueryClient();
+// export function useCreatePortfolioCategory() {
+//   const qc = useQueryClient();
 
-  return useMutation({
-    mutationFn: portfolioApi.create,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: portfolioKeys.categories() });
-    },
-    retry: 1,
-  });
-}
+//   return useMutation({
+//     mutationFn: portfolioApi.create,
+//     onSuccess: () => {
+//       qc.invalidateQueries({ queryKey: portfolioKeys.categories() });
+//     },
+//     retry: 1,
+//   });
+// }
 
-export function useUpdatePortfolioCategory() {
-  const qc = useQueryClient();
+// export function useUpdatePortfolioCategory() {
+//   const qc = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({
-      id,
-      payload,
-    }: {
-      id: string | number;
-      payload: Partial<PortfolioCategory>;
-    }) => portfolioApi.update(id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: portfolioKeys.categories() });
-    },
-    retry: 1,
-  });
-}
+//   return useMutation({
+//     mutationFn: ({
+//       id,
+//       payload,
+//     }: {
+//       id: string | number;
+//       payload: Partial<PortfolioCategory>;
+//     }) => portfolioApi.update(id, payload),
+//     onSuccess: () => {
+//       qc.invalidateQueries({ queryKey: portfolioKeys.categories() });
+//     },
+//     retry: 1,
+//   });
+// }
 
-export function useDeletePortfolioCategory() {
-  const qc = useQueryClient();
+// export function useDeletePortfolioCategory() {
+//   const qc = useQueryClient();
 
-  return useMutation({
-    mutationFn: portfolioApi.remove,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: portfolioKeys.categories() });
-    },
-    retry: 1,
-  });
-}
+//   return useMutation({
+//     mutationFn: portfolioApi.remove,
+//     onSuccess: () => {
+//       qc.invalidateQueries({ queryKey: portfolioKeys.categories() });
+//     },
+//     retry: 1,
+//   });
+// }
 
 /* ================================== */
 /* REACT QUERY HOOKS - OVERVIEW */
