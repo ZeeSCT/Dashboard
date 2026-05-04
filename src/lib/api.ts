@@ -206,6 +206,86 @@ export interface DocumentationStatusResponse {
 }
 
 /* ================================== */
+/* PROJECT DRILL DOWN TYPES */
+/* ================================== */
+
+export type ProjectActivitySeverity = "success" | "warning" | "danger";
+
+export type ProjectMilestoneStatus =
+  | "Complete"
+  | "Delayed"
+  | "At risk"
+  | "Upcoming";
+
+export interface ProjectDrillDownProjectOption {
+  id: string;
+  code: string;
+  name: string;
+  clientName?: string | null;
+  projectManager?: string | null;
+  health: ProjectHealthLabel;
+  healthStatus: ProjectHealthStatus;
+}
+
+export interface ProjectDrillDownKpis {
+  completion: number;
+  plannedProgress: number;
+  scheduleVariance: number;
+  blockedPackages: number;
+  totalPackages: number;
+  pendingApprovals: number;
+  overdueApprovals: number;
+  openNcrs: number;
+}
+
+export interface ProjectDrillDownPackage {
+  id: string;
+  name: string;
+  status: ProjectHealthStatus;
+  completion: number;
+}
+
+export interface ProjectDrillDownActivity {
+  id: string;
+  title: string;
+  description: string;
+  severity: ProjectActivitySeverity;
+}
+
+export interface ProjectDrillDownMilestone {
+  id: string;
+  name: string;
+  plannedDate: string;
+  forecastDate: string | null;
+  varianceDays: number | null;
+  status: ProjectMilestoneStatus;
+}
+
+export interface ProjectDrillDownSummary {
+  id: string;
+  code: string;
+  name: string;
+  clientName?: string | null;
+  projectManager?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  health: ProjectHealthLabel;
+  healthStatus: ProjectHealthStatus;
+  kpis: ProjectDrillDownKpis;
+  packages: ProjectDrillDownPackage[];
+  activities: ProjectDrillDownActivity[];
+  milestones: ProjectDrillDownMilestone[];
+}
+
+export interface ProjectDrillDownResponse {
+  selectedCategory: PortfolioCategoryCode;
+  selectedProjectId: string | null;
+  projects: ProjectDrillDownProjectOption[];
+  project: ProjectDrillDownSummary | null;
+}
+
+
+/* ================================== */
 /* ERROR CLASS */
 /* ================================== */
 
@@ -292,22 +372,7 @@ export const portfolioApi = {
   getOne: (id: string | number) =>
     request<PortfolioCategory>(`/executive/portfolio-categories/${id}`),
 
-  // create: (payload: Partial<PortfolioCategory>) =>
-  //   request<PortfolioCategory>("executive/portfolio-categories", {
-  //     method: "POST",
-  //     body: JSON.stringify(payload),
-  //   }),
 
-  // update: (id: string | number, payload: Partial<PortfolioCategory>) =>
-  //   request<PortfolioCategory>(`executive/portfolio-categories/${id}`, {
-  //     method: "PATCH",
-  //     body: JSON.stringify(payload),
-  //   }),
-
-  // remove: (id: string | number) =>
-  //   request<PortfolioCategory>(`executive/portfolio-categories/${id}`, {
-  //     method: "DELETE",
-  //   }),
 };
 
 /* ================================== */
@@ -346,6 +411,28 @@ export const documentationStatusApi = {
   },
 };
 
+
+/* ================================== */
+/* PROJECT DRILL DOWN API */
+/* ================================== */
+
+export const projectDrillDownApi = {
+  getSummary: (
+    category: PortfolioCategoryCode = "all",
+    projectId?: string | null
+  ) => {
+    const query = new URLSearchParams({
+      category,
+      ...(projectId ? { projectId } : {}),
+    });
+
+    return request<ProjectDrillDownResponse>(
+      `/executive/project-drilldown?${query.toString()}`
+    );
+  },
+};
+
+
 /* ================================== */
 /* REACT QUERY KEYS */
 /* ================================== */
@@ -374,72 +461,37 @@ export const documentationStatusKeys = {
   ) => [...documentationStatusKeys.all, category, stage] as const,
 };
 
-/* ================================== */
-/* REACT QUERY HOOKS - CATEGORIES */
-/* ================================== */
+export const projectDrillDownKeys = {
+  all: ["project-drill-down"] as const,
 
-export function usePortfolioCategories(
-  filters: PortfolioCategoryFilters = {}
-) {
-  return useQuery({
-    queryKey: portfolioKeys.list(filters),
-    queryFn: async () => {
-      const res = await portfolioApi.getAll(filters);
+  detail: (
+    category: PortfolioCategoryCode,
+    projectId?: string | null
+  ) => [...projectDrillDownKeys.all, category, projectId ?? "default"] as const,
+};
 
-      return {
-        data: normalizeList<PortfolioCategory>(res),
-        meta: res.meta,
-      };
-    },
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
-  });
-}
+// /* ================================== */
+// /* REACT QUERY HOOKS - CATEGORIES */
+// /* ================================== */
 
-// /* Optional alias if older files use this name */
-// export const getPortfolioCategories = usePortfolioCategories;
+// export function usePortfolioCategories(
+//   filters: PortfolioCategoryFilters = {}
+// ) {
+//   return useQuery({
+//     queryKey: portfolioKeys.list(filters),
+//     queryFn: async () => {
+//       const res = await portfolioApi.getAll(filters);
 
-// export function useCreatePortfolioCategory() {
-//   const qc = useQueryClient();
-
-//   return useMutation({
-//     mutationFn: portfolioApi.create,
-//     onSuccess: () => {
-//       qc.invalidateQueries({ queryKey: portfolioKeys.categories() });
+//       return {
+//         data: normalizeList<PortfolioCategory>(res),
+//         meta: res.meta,
+//       };
 //     },
-//     retry: 1,
+//     staleTime: 5 * 60 * 1000,
+//     retry: 2,
 //   });
 // }
 
-// export function useUpdatePortfolioCategory() {
-//   const qc = useQueryClient();
-
-//   return useMutation({
-//     mutationFn: ({
-//       id,
-//       payload,
-//     }: {
-//       id: string | number;
-//       payload: Partial<PortfolioCategory>;
-//     }) => portfolioApi.update(id, payload),
-//     onSuccess: () => {
-//       qc.invalidateQueries({ queryKey: portfolioKeys.categories() });
-//     },
-//     retry: 1,
-//   });
-// }
-
-// export function useDeletePortfolioCategory() {
-//   const qc = useQueryClient();
-
-//   return useMutation({
-//     mutationFn: portfolioApi.remove,
-//     onSuccess: () => {
-//       qc.invalidateQueries({ queryKey: portfolioKeys.categories() });
-//     },
-//     retry: 1,
-//   });
-// }
 
 /* ================================== */
 /* REACT QUERY HOOKS - OVERVIEW */
@@ -467,6 +519,22 @@ export function useDocumentationStatus(
   return useQuery({
     queryKey: documentationStatusKeys.detail(category, stage),
     queryFn: () => documentationStatusApi.getStatus(category, stage),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+/* ================================== */
+/* REACT QUERY HOOKS - PROJECT DRILL DOWN */
+/* ================================== */
+
+export function useProjectDrillDown(
+  category: PortfolioCategoryCode = "all",
+  projectId?: string | null
+) {
+  return useQuery({
+    queryKey: projectDrillDownKeys.detail(category, projectId),
+    queryFn: () => projectDrillDownApi.getSummary(category, projectId),
     staleTime: 60 * 1000,
     retry: 1,
   });

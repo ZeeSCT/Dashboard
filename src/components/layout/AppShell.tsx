@@ -9,15 +9,17 @@ import { pageRegistry } from "@/lib/pageRegistry";
 import type { ScreenKey } from "@/data/screens";
 import type { PortfolioCategory } from "@/data/portfolio";
 
+type ScreenProps = {
+  selectedPortfolioCategory?: PortfolioCategory;
+};
+
 export default function AppShell() {
   const [active, setActive] = useState<ScreenKey>("portfolio");
 
   const [selectedPortfolioCategory, setSelectedPortfolioCategory] =
     useState<PortfolioCategory>("all");
 
-  const ActiveScreen = pageRegistry[active] as ComponentType<{
-    selectedPortfolioCategory?: PortfolioCategory;
-  }>;
+  const ActiveScreen = pageRegistry[active] as ComponentType<ScreenProps>;
 
   return (
     <div className="shell">
