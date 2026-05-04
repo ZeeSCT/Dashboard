@@ -1044,7 +1044,9 @@ body {
   color: #0f172a;
   display: flex;
   flex-direction: column;
+  display: flex;
   justify-content: center;
+  align-items: center;
   position: sticky;
   top: 0;
   background: linear-gradient(135deg, #ffffff 0%, #f2f7ff 100%);
