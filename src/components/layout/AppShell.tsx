@@ -1,22 +1,41 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Sidebar from './Sidebar';
-import Topbar from './Topbar';
-import { pageRegistry } from '@/lib/pageRegistry';
-import type { ScreenKey } from '@/data/screens';
+import { useState } from "react";
+import type { ComponentType } from "react";
+
+import Sidebar from "./Sidebar";
+import Topbar from "./Topbar";
+import { pageRegistry } from "@/lib/pageRegistry";
+import type { ScreenKey } from "@/data/screens";
+import type { PortfolioCategory } from "@/data/portfolio";
+
+type ScreenProps = {
+  selectedPortfolioCategory?: PortfolioCategory;
+};
 
 export default function AppShell() {
-  const [active, setActive] = useState<ScreenKey>('portfolio');
-  const ActiveScreen = pageRegistry[active];
+  const [active, setActive] = useState<ScreenKey>("portfolio");
+
+  const [selectedPortfolioCategory, setSelectedPortfolioCategory] =
+    useState<PortfolioCategory>("all");
+
+  const ActiveScreen = pageRegistry[active] as ComponentType<ScreenProps>;
 
   return (
     <div className="shell">
       <Sidebar active={active} onChange={setActive} />
+
       <div className="main">
-        <Topbar active={active} />
+        <Topbar
+          active={active}
+          selectedPortfolioCategory={selectedPortfolioCategory}
+          onPortfolioCategoryChange={setSelectedPortfolioCategory}
+        />
+
         <div className="cnt">
-          <ActiveScreen />
+          <ActiveScreen
+            selectedPortfolioCategory={selectedPortfolioCategory}
+          />
         </div>
       </div>
     </div>
