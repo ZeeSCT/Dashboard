@@ -1,20 +1,26 @@
-'use client';
+"use client";
 
-const USERS_KEY = 'scientechnic_users';
-const SESSION_KEY = 'scientechnic_session';
+const SESSION_KEY = "scientechnic_session";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api/v1";
+
+const DEFAULT_EMAIL = "admin@scientechnic.local";
+const DEFAULT_PASSWORD = "Admin@123";
 
 export interface AuthUser {
+  id: string;
   name: string;
   email: string;
-}
-
-interface StoredUser extends AuthUser {
-  password: string;
+  role?: string;
 }
 
 export interface AuthSession {
   token: string;
+  accessToken: string;
+  tokenType: string;
   user: AuthUser;
+  isLocalFallback?: boolean;
 }
 
 export interface RegisterPayload {
@@ -28,31 +34,14 @@ export interface LoginPayload {
   password: string;
 }
 
-const defaultUser: StoredUser = {
-  name: 'Admin User',
-  email: 'admin@scientechnic.local',
-  password: 'Admin@123',
-};
+interface BackendAuthResponse {
+  accessToken: string;
+  tokenType?: string;
+  user: AuthUser;
+}
 
 function isBrowser(): boolean {
-  return typeof window !== 'undefined';
-}
-
-function readUsers(): StoredUser[] {
-  if (!isBrowser()) return [];
-
-  try {
-    const rawUsers = localStorage.getItem(USERS_KEY);
-    return rawUsers ? (JSON.parse(rawUsers) as StoredUser[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeUsers(users: StoredUser[]): void {
-  if (!isBrowser()) return;
-
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  return typeof window !== "undefined";
 }
 
 function writeSession(session: AuthSession): void {
@@ -61,80 +50,104 @@ function writeSession(session: AuthSession): void {
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
-export function seedUsersIfMissing(): void {
-  if (!isBrowser()) return;
-
-  const existing = localStorage.getItem(USERS_KEY);
-
-  if (!existing) {
-    localStorage.setItem(USERS_KEY, JSON.stringify([defaultUser]));
-  }
-}
-
-export function registerUser({
-  name,
-  email,
-  password,
-}: RegisterPayload): AuthSession {
-  seedUsersIfMissing();
-
-  const users = readUsers();
-  const normalizedEmail = email.trim().toLowerCase();
-
-  const exists = users.some(
-    (user) => user.email.toLowerCase() === normalizedEmail
-  );
-
-  if (exists) {
-    throw new Error('This email is already registered.');
-  }
-
-  const user: StoredUser = {
-    name: name.trim(),
-    email: normalizedEmail,
-    password,
-  };
-
-  users.push(user);
-  writeUsers(users);
-
-  const session: AuthSession = {
-    token: `local-token-${Date.now()}`,
+function createDefaultLocalSession(): AuthSession {
+  return {
+    token: "local-dev-token",
+    accessToken: "local-dev-token",
+    tokenType: "Bearer",
+    isLocalFallback: true,
     user: {
-      name: user.name,
-      email: user.email,
+      id: "local-admin",
+      name: "Admin User",
+      email: DEFAULT_EMAIL,
+      role: "SUPER_ADMIN",
     },
   };
+}
 
+function normalizeBackendSession(data: BackendAuthResponse): AuthSession {
+  return {
+    token: data.accessToken,
+    accessToken: data.accessToken,
+    tokenType: data.tokenType || "Bearer",
+    user: data.user,
+  };
+}
+
+async function parseAuthResponse(response: Response): Promise<AuthSession> {
+  const text = await response.text();
+
+  let data: unknown = {};
+
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {
+      message: text || "Unexpected response",
+    };
+  }
+
+  if (!response.ok) {
+    const errorData = data as {
+      message?: string | string[];
+      error?: string;
+    };
+
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(", ")
+      : errorData.message || errorData.error || "Authentication failed";
+
+    throw new Error(message);
+  }
+
+  return normalizeBackendSession(data as BackendAuthResponse);
+}
+
+export function seedUsersIfMissing(): void {
+  // No longer needed for backend auth.
+  // Kept only so older imports do not break.
+}
+
+export async function loginUser(payload: LoginPayload): Promise<AuthSession> {
+  const email = payload.email.trim().toLowerCase();
+  const password = payload.password;
+
+  /**
+   * Temporary fallback login.
+   * This allows local login even before backend DB auth is ready.
+   */
+  if (email === DEFAULT_EMAIL && password === DEFAULT_PASSWORD) {
+    const session = createDefaultLocalSession();
+    writeSession(session);
+    return session;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const session = await parseAuthResponse(response);
   writeSession(session);
 
   return session;
 }
 
-export function loginUser({ email, password }: LoginPayload): AuthSession {
-  seedUsersIfMissing();
-
-  const users = readUsers();
-  const normalizedEmail = email.trim().toLowerCase();
-
-  const user = users.find(
-    (item) =>
-      item.email.toLowerCase() === normalizedEmail &&
-      item.password === password
-  );
-
-  if (!user) {
-    throw new Error('Invalid email or password.');
-  }
-
-  const session: AuthSession = {
-    token: `local-token-${Date.now()}`,
-    user: {
-      name: user.name,
-      email: user.email,
+export async function registerUser(
+  payload: RegisterPayload
+): Promise<AuthSession> {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  };
+    body: JSON.stringify(payload),
+  });
 
+  const session = await parseAuthResponse(response);
   writeSession(session);
 
   return session;
@@ -158,4 +171,21 @@ export function logoutUser(): void {
   if (!isBrowser()) return;
 
   localStorage.removeItem(SESSION_KEY);
+}
+
+export function getAuthToken(): string | null {
+  return getSession()?.token ?? null;
+}
+
+export function getAuthHeaders(): HeadersInit {
+  const token = getAuthToken();
+
+  return {
+    "Content-Type": "application/json",
+    ...(token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : {}),
+  };
 }

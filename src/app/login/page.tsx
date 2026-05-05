@@ -41,22 +41,22 @@ export default function LoginPage() {
     }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    setError("");
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+  event.preventDefault();
+  setError("");
 
-    try {
-      login(form);
+  try {
+    await login(form);
 
-      const params = new URLSearchParams(window.location.search);
-      const next = params.get("next") || "/dashboard";
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next") || "/dashboard";
 
-      router.replace(next);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to login.";
-      setError(message);
-    }
+    router.replace(next);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unable to login.";
+    setError(message);
   }
+}
 
   return (
     <main className="authPage">
