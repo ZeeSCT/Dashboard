@@ -6,18 +6,16 @@ import {
 
 
 function formatMoney(value?: number) {
-  if (value == null) return "AED 0";
+  if (!value) return "AED 0";
 
   const million = value / 1_000_000;
 
   if (million >= 1) {
-    return `AED ${million.toFixed(0)}M`;
+    return `AED ${million.toFixed(1)}M`;
   }
 
-  const thousand = value / 1_000;
-  return `AED ${thousand.toFixed(0)}K`;
+  return `AED ${(value / 1_000).toFixed(0)}K`;
 }
-
 type Tone = "g" | "w" | "d" | "";
 
 interface KpiItem {
@@ -39,11 +37,10 @@ function KpiCard({ item }: { item: KpiItem }) {
 
 function BillingKpis() {
   const { data } = useRevenueBillingSummary();
+  const { data: projects } = useRevenueBillingProjects();
 
-  const activeProjects =
-  useRevenueBillingProjects().data?.filter(
-    (p) => p.contractValue > 0
-  ).length ?? 0;
+
+const activeProjects = projects?.length ?? 0;
 
   const kpis: KpiItem[] = data
     ? [
@@ -85,9 +82,8 @@ function BillingKpis() {
 function BillingTable() {
   const { data } = useRevenueBillingProjects();
 
-  const rows: RevenueBillingProject[] = (data ?? [])
-  .filter((p) => p.contractValue > 0 || p.invoicedToDate > 0)
-  .slice(0, 8);
+  const rows: RevenueBillingProject[] = data ?? [];
+  
 
   return (
     <div className="cd">
@@ -102,54 +98,80 @@ function BillingTable() {
             <th>Progress</th>
             <th>Billing ready</th>
             <th>Status</th>
+            
           </tr>
         </thead>
 
         <tbody>
-          {rows.map((r) => {
-            const tone: Tone =
-              r.status === "READY"
-                ? "g"
-                : r.status === "PARTIAL"
-                ? "w"
-                : "d";
+  {rows.map((r) => (
+    <tr key={r.projectId}>
+      <td>{r.projectName}</td>
 
-            return (
-              <tr key={r.projectId}>
-                <td>{r.projectName}</td>
+      <td>{formatMoney(r.contractValue)}</td>
 
-                <td>{formatMoney(r.contractValue)}</td>
+      <td>{formatMoney(r.invoicedToDate)}</td>
 
-<td>{formatMoney(r.invoicedToDate)}</td>
+      <td>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          <div className="bw">
+            <div
+              className={`bf ${
+                r.tone === "g"
+                  ? "bfg"
+                  : r.tone === "w"
+                  ? "bfa"
+                  : "bfr"
+              }`}
+              style={{
+                width: `${r.progressPct}%`,
+              }}
+            />
+          </div>
 
-<td>
-  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-    <div className="bw">
-      <div className="bf" style={{ width: `${r.progressPct}%` }} />
-    </div>
-    {r.progressPct}%
-  </div>
-</td>
+          {r.progressPct}%
+        </div>
+      </td>
 
-<td>{formatMoney(r.billingReadyAmount)}</td>
+      <td
+        style={{
+          color:
+            r.tone === "g"
+              ? "var(--gn)"
+              : r.tone === "w"
+              ? "var(--am)"
+              : "var(--rd)",
+          fontWeight: 500,
+        }}
+      >
+        {formatMoney(r.billingReadyAmount)}
+      </td>
 
-                <td>
-                  <span
-                    className={`b ${
-                      tone === "g"
-                        ? "bg2"
-                        : tone === "w"
-                        ? "ba"
-                        : "bgr"
-                    }`}
-                  >
-                    {r.status}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
+      <td>
+        <span
+          className={`b ${
+            r.tone === "g"
+              ? "bg2"
+              : r.tone === "w"
+              ? "ba"
+              : "bgr"
+          }`}
+        >
+          {r.status === "READY"
+            ? "Ready"
+            : r.status === "PARTIAL"
+            ? "Partial"
+            : "Not ready"}
+        </span>
+      </td>
+    </tr>
+  ))}
+</tbody>
       </table>
     </div>
   );

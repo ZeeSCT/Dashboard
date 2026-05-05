@@ -314,7 +314,10 @@ export interface RevenueBillingProject {
   billingReadyAmount: number;
 
   status: 'READY' | 'PARTIAL' | 'NOT_READY';
+
+    tone: 'g' | 'w' | 'd';
 }
+
 
 /* ================================== */
 /* PROJECT HEALTH TYPES */
