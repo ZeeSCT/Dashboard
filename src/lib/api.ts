@@ -7,6 +7,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { getAuthHeaders } from "@/lib/auth";
 
 /* ================================== */
 /* CONFIG */
@@ -311,6 +312,7 @@ async function request<T>(
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...getAuthHeaders(),
       ...(options.headers || {}),
     },
   });
@@ -468,29 +470,6 @@ export const projectDrillDownKeys = {
     projectId?: string | null
   ) => [...projectDrillDownKeys.all, category, projectId ?? "default"] as const,
 };
-
-// /* ================================== */
-// /* REACT QUERY HOOKS - CATEGORIES */
-// /* ================================== */
-
-// export function usePortfolioCategories(
-//   filters: PortfolioCategoryFilters = {}
-// ) {
-//   return useQuery({
-//     queryKey: portfolioKeys.list(filters),
-//     queryFn: async () => {
-//       const res = await portfolioApi.getAll(filters);
-
-//       return {
-//         data: normalizeList<PortfolioCategory>(res),
-//         meta: res.meta,
-//       };
-//     },
-//     staleTime: 5 * 60 * 1000,
-//     retry: 2,
-//   });
-// }
-
 
 /* ================================== */
 /* REACT QUERY HOOKS - OVERVIEW */

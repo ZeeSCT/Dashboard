@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   createContext,
@@ -7,7 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
-} from 'react';
+} from "react";
 
 import {
   AuthSession,
@@ -18,8 +18,7 @@ import {
   loginUser,
   logoutUser,
   registerUser,
-  seedUsersIfMissing,
-} from '@/lib/auth';
+} from "@/lib/auth";
 
 interface AuthContextValue {
   session: AuthSession | null;
@@ -27,8 +26,8 @@ interface AuthContextValue {
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (payload: LoginPayload) => AuthSession;
-  register: (payload: RegisterPayload) => AuthSession;
+  login: (payload: LoginPayload) => Promise<AuthSession>;
+  register: (payload: RegisterPayload) => Promise<AuthSession>;
   logout: () => void;
 }
 
@@ -43,22 +42,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    seedUsersIfMissing();
-
     const currentSession = getSession();
     setSession(currentSession);
-
     setLoading(false);
   }, []);
 
-  function login(payload: LoginPayload): AuthSession {
-    const newSession = loginUser(payload);
+  async function login(payload: LoginPayload): Promise<AuthSession> {
+    const newSession = await loginUser(payload);
     setSession(newSession);
     return newSession;
   }
 
-  function register(payload: RegisterPayload): AuthSession {
-    const newSession = registerUser(payload);
+  async function register(payload: RegisterPayload): Promise<AuthSession> {
+    const newSession = await registerUser(payload);
     setSession(newSession);
     return newSession;
   }
@@ -89,7 +85,7 @@ export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error('useAuth must be used inside AuthProvider');
+    throw new Error("useAuth must be used inside AuthProvider");
   }
 
   return context;

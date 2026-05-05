@@ -43,19 +43,19 @@ export default function RegisterPage() {
     }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    setError("");
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+  event.preventDefault();
+  setError("");
 
-    try {
-      register(form);
-      router.replace("/dashboard");
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Unable to register.";
-      setError(message);
-    }
+  try {
+    await register(form);
+    router.replace("/dashboard");
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Unable to register.";
+    setError(message);
   }
+}
 
   return (
     <main className="authPage">
