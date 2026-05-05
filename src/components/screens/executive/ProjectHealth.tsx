@@ -73,18 +73,13 @@ function KpiCard({
   );
 }
 
-function KpiRow({
-  kpis,
-}: {
-  kpis: any[];
-}) {
+function KpiRow({ kpis }: { kpis: any[] }) {
+  if (!Array.isArray(kpis)) return null;
+
   return (
     <div className="kr">
       {kpis.map((item) => (
-        <KpiCard
-          key={item.status}
-          item={item}
-        />
+        <KpiCard key={item.status} item={item} />
       ))}
     </div>
   );

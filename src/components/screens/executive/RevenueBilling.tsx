@@ -1,7 +1,22 @@
 import {
   useRevenueBillingSummary,
   useRevenueBillingProjects,
+  RevenueBillingProject,
 } from "@/lib/api";
+
+
+function formatMoney(value?: number) {
+  if (value == null) return "AED 0";
+
+  const million = value / 1_000_000;
+
+  if (million >= 1) {
+    return `AED ${million.toFixed(0)}M`;
+  }
+
+  const thousand = value / 1_000;
+  return `AED ${thousand.toFixed(0)}K`;
+}
 
 type Tone = "g" | "w" | "d" | "";
 
@@ -10,16 +25,6 @@ interface KpiItem {
   value: string;
   subtext?: string;
   tone?: Tone;
-}
-
-interface BillingProject {
-  projectName: string;
-  contractValue: string;
-  invoiced: string;
-  progress: number;
-  billingReady: string;
-  status: "Ready" | "Partial" | "Not ready";
-  tone: Tone;
 }
 
 function KpiCard({ item }: { item: KpiItem }) {
@@ -35,7 +40,38 @@ function KpiCard({ item }: { item: KpiItem }) {
 function BillingKpis() {
   const { data } = useRevenueBillingSummary();
 
-  const kpis: KpiItem[] = data ?? [];
+  const activeProjects =
+  useRevenueBillingProjects().data?.filter(
+    (p) => p.contractValue > 0
+  ).length ?? 0;
+
+  const kpis: KpiItem[] = data
+    ? [
+        {
+          label: "Contract value",
+          value: formatMoney(data.contractValue),
+          subtext: `${activeProjects} active projects`,
+          tone: "g",
+        },
+        {
+          label: "Invoiced to date",
+          value: formatMoney(data.invoicedToDate),
+          subtext: `${data.invoicedPct ?? 0}%`,
+          tone: "g",
+        },
+        {
+          label: "Billing ready now",
+          value: formatMoney(data.billingReadyNow),
+          subtext: `${data.billingReadyProjects ?? 0} projects`,
+          tone: "g",
+        },
+        {
+          label: "Overdue receivables",
+          value: formatMoney(data.overdueReceivables),
+          tone: "d",
+        },
+      ]
+    : [];
 
   return (
     <div className="kr">
@@ -47,10 +83,11 @@ function BillingKpis() {
 }
 
 function BillingTable() {
-  // ✅ FIX: use correct hook name
   const { data } = useRevenueBillingProjects();
 
-  const rows: BillingProject[] = data ?? [];
+  const rows: RevenueBillingProject[] = (data ?? [])
+  .filter((p) => p.contractValue > 0 || p.invoicedToDate > 0)
+  .slice(0, 8);
 
   return (
     <div className="cd">
@@ -69,53 +106,49 @@ function BillingTable() {
         </thead>
 
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.projectName}>
-              <td>{r.projectName}</td>
-              <td>{r.contractValue}</td>
-              <td>{r.invoiced}</td>
+          {rows.map((r) => {
+            const tone: Tone =
+              r.status === "READY"
+                ? "g"
+                : r.status === "PARTIAL"
+                ? "w"
+                : "d";
 
-              <td>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <div className="bw">
-                    <div
-                      className="bf"
-                      style={{ width: `${r.progress}%` }}
-                    />
-                  </div>
-                  {r.progress}%
-                </div>
-              </td>
+            return (
+              <tr key={r.projectId}>
+                <td>{r.projectName}</td>
 
-              <td
-                style={{
-                  color:
-                    r.tone === "g"
-                      ? "var(--gn)"
-                      : r.tone === "w"
-                      ? "var(--am)"
-                      : "var(--t3)",
-                  fontWeight: 500,
-                }}
-              >
-                {r.billingReady}
-              </td>
+                <td>{formatMoney(r.contractValue)}</td>
 
-              <td>
-                <span
-                  className={`b ${
-                    r.tone === "g"
-                      ? "bg2"
-                      : r.tone === "w"
-                      ? "ba"
-                      : "bgr"
-                  }`}
-                >
-                  {r.status}
-                </span>
-              </td>
-            </tr>
-          ))}
+<td>{formatMoney(r.invoicedToDate)}</td>
+
+<td>
+  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    <div className="bw">
+      <div className="bf" style={{ width: `${r.progressPct}%` }} />
+    </div>
+    {r.progressPct}%
+  </div>
+</td>
+
+<td>{formatMoney(r.billingReadyAmount)}</td>
+
+                <td>
+                  <span
+                    className={`b ${
+                      tone === "g"
+                        ? "bg2"
+                        : tone === "w"
+                        ? "ba"
+                        : "bgr"
+                    }`}
+                  >
+                    {r.status}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
