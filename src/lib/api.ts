@@ -284,103 +284,39 @@ export interface ProjectDrillDownResponse {
   project: ProjectDrillDownSummary | null;
 }
 
-
 /* ================================== */
-/* PROJECT HEALTH TYPES */
+/* REVENUE&BILLING TYPES */
 /* ================================== */
+export interface RevenueBillingSummary {
+  contractValue: number;
+  invoicedToDate: number;
+  billingReadyNow: number;
+  pendingMilestoneUnlock: number;
+  overdueReceivables: number;
 
-export interface ProjectHealthSummaryItem {
-  status: ProjectHealthStatus;
-  label: ProjectHealthLabel;
-  value: number;
-  percentage: number;
+  totalProjects: number;
+  billingReadyProjects: number;
+
+  invoicedPct: number;
 }
 
-export interface DelayedMilestoneItem {
+export interface RevenueBillingProject {
   projectId: string;
   projectCode: string;
+
   projectName: string;
-  clientName?: string;
+  clientName: string;
 
-  pendingMilestones: number;
+  contractValue: number;
+  invoicedToDate: number;
 
-  status: ProjectHealthStatus;
+  progressPct: number;
 
-  label: string;
+  billingReadyAmount: number;
 
-  widthPct: number;
+  status: 'READY' | 'PARTIAL' | 'NOT_READY';
 }
 
-export interface BlockedItem {
-  projectId: string;
-  projectCode: string;
-  projectName: string;
-  clientName?: string;
-
-  blockedItems: number;
-
-  label: string;
-
-  widthPct: number;
-}
-
-export interface HealthTrendItem {
-  week: string;
-
-  onTrack: number;
-  atRisk: number;
-  delayed: number;
-  critical: number;
-}
-
-
-/* ================================== */
-/* PROJECT HEALTH API */
-/* ================================== */
-
-export const projectHealthApi = {
-  getSummary: (
-    category: PortfolioCategoryCode = "all"
-  ) => {
-    const query = new URLSearchParams({
-      category,
-    });
-
-    return request<ProjectHealthSummaryItem[]>(
-      `/executive/project-health/summary?${query.toString()}`
-    );
-  },
-
-  getDelayedMilestones: (
-    category: PortfolioCategoryCode = "all"
-  ) => {
-    const query = new URLSearchParams({
-      category,
-    });
-
-    return request<DelayedMilestoneItem[]>(
-      `/executive/project-health/delayed-milestones?${query.toString()}`
-    );
-  },
-
-  getBlockedItems: (
-    category: PortfolioCategoryCode = "all"
-  ) => {
-    const query = new URLSearchParams({
-      category,
-    });
-
-    return request<BlockedItem[]>(
-      `/executive/project-health/blocked-items?${query.toString()}`
-    );
-  },
-
-  getHealthTrend: () => {
-    return request<HealthTrendItem[]>(
-      `/executive/project-health/health-trend`
-    );
-  },
-};
 
 
 
@@ -533,6 +469,24 @@ export const projectDrillDownApi = {
 
 
 /* ================================== */
+/* REVENUE & BILLING API */
+/* ================================== */
+
+
+export const revenueBillingApi = {
+  getSummary: () =>
+    request<RevenueBillingSummary>(
+      '/revenue-billing/summary'
+    ),
+
+  getProjects: () =>
+    request<RevenueBillingProject[]>(
+      '/revenue-billing/by-project'
+    ),
+};
+
+
+/* ================================== */
 /* REACT QUERY KEYS */
 /* ================================== */
 
@@ -567,35 +521,22 @@ export const projectDrillDownKeys = {
     category: PortfolioCategoryCode,
     projectId?: string | null
   ) => [...projectDrillDownKeys.all, category, projectId ?? "default"] as const,
+
+
+
+ 
 };
 
 
-export const projectHealthKeys = {
-  all: ["project-health"] as const,
 
-  summary: (category: PortfolioCategoryCode) =>
-    [...projectHealthKeys.all, "summary", category] as const,
+ export const revenueBillingKeys = {
+  all: ['revenue-billing'] as const,
 
-  delayedMilestones: (
-    category: PortfolioCategoryCode
-  ) =>
-    [
-      ...projectHealthKeys.all,
-      "delayed-milestones",
-      category,
-    ] as const,
+  summary: () =>
+    [...revenueBillingKeys.all, 'summary'] as const,
 
-  blockedItems: (
-    category: PortfolioCategoryCode
-  ) =>
-    [
-      ...projectHealthKeys.all,
-      "blocked-items",
-      category,
-    ] as const,
-
-  healthTrend: () =>
-    [...projectHealthKeys.all, "health-trend"] as const,
+  projects: () =>
+    [...revenueBillingKeys.all, 'projects'] as const,
 };
 
 // /* ================================== */
@@ -668,70 +609,24 @@ export function useProjectDrillDown(
   });
 }
 
-
 /* ================================== */
-/* REACT QUERY HOOKS - PROJECT HEALTH */
+/* REACT QUERY HOOKS - REVENUE & BILLING */
 /* ================================== */
 
-export function useProjectHealthSummary(
-  category: PortfolioCategoryCode = "all"
-) {
+export function useRevenueBillingSummary() {
   return useQuery({
-    queryKey: projectHealthKeys.summary(category),
-
-    queryFn: () =>
-      projectHealthApi.getSummary(category),
-
+    queryKey: revenueBillingKeys.summary(),
+    queryFn: () => revenueBillingApi.getSummary(),
     staleTime: 60 * 1000,
-
     retry: 1,
   });
 }
 
-export function useDelayedMilestones(
-  category: PortfolioCategoryCode = "all"
-) {
+export function useRevenueBillingProjects() {
   return useQuery({
-    queryKey:
-      projectHealthKeys.delayedMilestones(category),
-
-    queryFn: () =>
-      projectHealthApi.getDelayedMilestones(
-        category
-      ),
-
+    queryKey: revenueBillingKeys.projects(),
+    queryFn: () => revenueBillingApi.getProjects(),
     staleTime: 60 * 1000,
-
     retry: 1,
-  });
-}
-
-export function useBlockedItems(
-  category: PortfolioCategoryCode = "all"
-) {
-  return useQuery({
-    queryKey:
-      projectHealthKeys.blockedItems(category),
-
-    queryFn: () =>
-      projectHealthApi.getBlockedItems(category),
-
-    staleTime: 60 * 1000,
-
-    retry: 1,
-  });
-}
-
-export function useHealthTrend() {
-  return useQuery({
-    queryKey:
-      projectHealthKeys.healthTrend(),
-
-    queryFn: () =>
-      projectHealthApi.getHealthTrend(),
-
-    staleTime: 60 * 1000,
-
-    retry: 1,
-  });
+     });
 }
