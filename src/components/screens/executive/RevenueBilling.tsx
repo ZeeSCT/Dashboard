@@ -1,5 +1,132 @@
-const html = "<div class=\"scr on\" id=\"screen-billing\">\n<div class=\"kr\">\n<div class=\"kc\"><div class=\"kl\">Contract value</div><div class=\"kv\">AED 187M</div><div class=\"ks\">24 projects</div></div>\n<div class=\"kc g\"><div class=\"kl\">Invoiced to date</div><div class=\"kv\">AED 94M</div><div class=\"ks\">50%</div></div>\n<div class=\"kc g\"><div class=\"kl\">Billing ready now</div><div class=\"kv\">AED 14.2M</div><div class=\"ks\">8 projects</div></div>\n<div class=\"kc w\"><div class=\"kl\">Pending milestone unlock</div><div class=\"kv\">AED 22.7M</div></div>\n<div class=\"kc d\"><div class=\"kl\">Overdue receivables</div><div class=\"kv\">AED 8.4M</div></div>\n</div>\n<div class=\"cd\">\n<div class=\"ch\">Billing readiness by project</div>\n<table><thead><tr><th>Project</th><th>Contract value</th><th>Invoiced</th><th>Progress</th><th>Billing ready</th><th>Status</th></tr></thead>\n<tbody>\n<tr><td>DIP Warehouse Complex</td><td>AED 38M</td><td>AED 31.5M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfg\" style=\"width:83%\"></div></div>83%</div></td><td style=\"color:var(--gn);font-weight:500\">AED 5.1M</td><td><span class=\"b bg2\">Ready</span></td></tr>\n<tr><td>Business Bay Infra</td><td>AED 29M</td><td>AED 25.8M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfg\" style=\"width:89%\"></div></div>89%</div></td><td style=\"color:var(--gn);font-weight:500\">AED 3.9M</td><td><span class=\"b bg2\">Ready</span></td></tr>\n<tr><td>JLT Tower Fit-out</td><td>AED 21M</td><td>AED 14.9M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfa\" style=\"width:71%\"></div></div>71%</div></td><td style=\"color:var(--gn);font-weight:500\">AED 3.4M</td><td><span class=\"b bg2\">Ready</span></td></tr>\n<tr><td>Al Barsha MEP Works</td><td>AED 42M</td><td>AED 17.6M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfr\" style=\"width:42%\"></div></div>42%</div></td><td style=\"color:var(--am);font-weight:500\">AED 1.8M</td><td><span class=\"b ba\">Partial</span></td></tr>\n<tr><td>DAFZA Industrial Ph.2</td><td>AED 31M</td><td>AED 18M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfa\" style=\"width:58%\"></div></div>58%</div></td><td style=\"color:var(--t3)\">\u2014</td><td><span class=\"b bgr\">Not ready</span></td></tr>\n<tr><td>Mirdif Villa Complex</td><td>AED 26M</td><td>AED 17.4M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfa\" style=\"width:67%\"></div></div>67%</div></td><td style=\"color:var(--t3)\">\u2014</td><td><span class=\"b bgr\">Not ready</span></td></tr>\n</tbody></table>\n</div>\n</div>";
+import {
+  useRevenueBillingSummary,
+  useRevenueBillingProjects,
+} from "@/lib/api";
+
+type Tone = "g" | "w" | "d" | "";
+
+interface KpiItem {
+  label: string;
+  value: string;
+  subtext?: string;
+  tone?: Tone;
+}
+
+interface BillingProject {
+  projectName: string;
+  contractValue: string;
+  invoiced: string;
+  progress: number;
+  billingReady: string;
+  status: "Ready" | "Partial" | "Not ready";
+  tone: Tone;
+}
+
+function KpiCard({ item }: { item: KpiItem }) {
+  return (
+    <div className={`kc ${item.tone ?? ""}`.trim()}>
+      <div className="kl">{item.label}</div>
+      <div className="kv">{item.value}</div>
+      {item.subtext && <div className="ks">{item.subtext}</div>}
+    </div>
+  );
+}
+
+function BillingKpis() {
+  const { data } = useRevenueBillingSummary();
+
+  const kpis: KpiItem[] = data ?? [];
+
+  return (
+    <div className="kr">
+      {kpis.map((item) => (
+        <KpiCard key={item.label} item={item} />
+      ))}
+    </div>
+  );
+}
+
+function BillingTable() {
+  // ✅ FIX: use correct hook name
+  const { data } = useRevenueBillingProjects();
+
+  const rows: BillingProject[] = data ?? [];
+
+  return (
+    <div className="cd">
+      <div className="ch">Billing readiness by project</div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Contract value</th>
+            <th>Invoiced</th>
+            <th>Progress</th>
+            <th>Billing ready</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.projectName}>
+              <td>{r.projectName}</td>
+              <td>{r.contractValue}</td>
+              <td>{r.invoiced}</td>
+
+              <td>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <div className="bw">
+                    <div
+                      className="bf"
+                      style={{ width: `${r.progress}%` }}
+                    />
+                  </div>
+                  {r.progress}%
+                </div>
+              </td>
+
+              <td
+                style={{
+                  color:
+                    r.tone === "g"
+                      ? "var(--gn)"
+                      : r.tone === "w"
+                      ? "var(--am)"
+                      : "var(--t3)",
+                  fontWeight: 500,
+                }}
+              >
+                {r.billingReady}
+              </td>
+
+              <td>
+                <span
+                  className={`b ${
+                    r.tone === "g"
+                      ? "bg2"
+                      : r.tone === "w"
+                      ? "ba"
+                      : "bgr"
+                  }`}
+                >
+                  {r.status}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default function RevenueBilling() {
-  return <div className="html-screen" dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div className="scr on" id="screen-billing">
+      <BillingKpis />
+      <BillingTable />
+    </div>
+  );
 }

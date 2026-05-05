@@ -284,6 +284,41 @@ export interface ProjectDrillDownResponse {
   project: ProjectDrillDownSummary | null;
 }
 
+/* ================================== */
+/* REVENUE&BILLING TYPES */
+/* ================================== */
+export interface RevenueBillingSummary {
+  contractValue: number;
+  invoicedToDate: number;
+  billingReadyNow: number;
+  pendingMilestoneUnlock: number;
+  overdueReceivables: number;
+
+  totalProjects: number;
+  billingReadyProjects: number;
+
+  invoicedPct: number;
+}
+
+export interface RevenueBillingProject {
+  projectId: string;
+  projectCode: string;
+
+  projectName: string;
+  clientName: string;
+
+  contractValue: number;
+  invoicedToDate: number;
+
+  progressPct: number;
+
+  billingReadyAmount: number;
+
+  status: 'READY' | 'PARTIAL' | 'NOT_READY';
+}
+
+
+
 
 /* ================================== */
 /* ERROR CLASS */
@@ -434,6 +469,24 @@ export const projectDrillDownApi = {
 
 
 /* ================================== */
+/* REVENUE & BILLING API */
+/* ================================== */
+
+
+export const revenueBillingApi = {
+  getSummary: () =>
+    request<RevenueBillingSummary>(
+      '/revenue-billing/summary'
+    ),
+
+  getProjects: () =>
+    request<RevenueBillingProject[]>(
+      '/revenue-billing/by-project'
+    ),
+};
+
+
+/* ================================== */
 /* REACT QUERY KEYS */
 /* ================================== */
 
@@ -468,6 +521,22 @@ export const projectDrillDownKeys = {
     category: PortfolioCategoryCode,
     projectId?: string | null
   ) => [...projectDrillDownKeys.all, category, projectId ?? "default"] as const,
+
+
+
+ 
+};
+
+
+
+ export const revenueBillingKeys = {
+  all: ['revenue-billing'] as const,
+
+  summary: () =>
+    [...revenueBillingKeys.all, 'summary'] as const,
+
+  projects: () =>
+    [...revenueBillingKeys.all, 'projects'] as const,
 };
 
 // /* ================================== */
@@ -538,4 +607,26 @@ export function useProjectDrillDown(
     staleTime: 60 * 1000,
     retry: 1,
   });
+}
+
+/* ================================== */
+/* REACT QUERY HOOKS - REVENUE & BILLING */
+/* ================================== */
+
+export function useRevenueBillingSummary() {
+  return useQuery({
+    queryKey: revenueBillingKeys.summary(),
+    queryFn: () => revenueBillingApi.getSummary(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useRevenueBillingProjects() {
+  return useQuery({
+    queryKey: revenueBillingKeys.projects(),
+    queryFn: () => revenueBillingApi.getProjects(),
+    staleTime: 60 * 1000,
+    retry: 1,
+     });
 }
