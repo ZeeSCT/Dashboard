@@ -286,6 +286,105 @@ export interface ProjectDrillDownResponse {
 
 
 /* ================================== */
+/* PROJECT HEALTH TYPES */
+/* ================================== */
+
+export interface ProjectHealthSummaryItem {
+  status: ProjectHealthStatus;
+  label: ProjectHealthLabel;
+  value: number;
+  percentage: number;
+}
+
+export interface DelayedMilestoneItem {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  clientName?: string;
+
+  pendingMilestones: number;
+
+  status: ProjectHealthStatus;
+
+  label: string;
+
+  widthPct: number;
+}
+
+export interface BlockedItem {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  clientName?: string;
+
+  blockedItems: number;
+
+  label: string;
+
+  widthPct: number;
+}
+
+export interface HealthTrendItem {
+  week: string;
+
+  onTrack: number;
+  atRisk: number;
+  delayed: number;
+  critical: number;
+}
+
+
+/* ================================== */
+/* PROJECT HEALTH API */
+/* ================================== */
+
+export const projectHealthApi = {
+  getSummary: (
+    category: PortfolioCategoryCode = "all"
+  ) => {
+    const query = new URLSearchParams({
+      category,
+    });
+
+    return request<ProjectHealthSummaryItem[]>(
+      `/executive/project-health/summary?${query.toString()}`
+    );
+  },
+
+  getDelayedMilestones: (
+    category: PortfolioCategoryCode = "all"
+  ) => {
+    const query = new URLSearchParams({
+      category,
+    });
+
+    return request<DelayedMilestoneItem[]>(
+      `/executive/project-health/delayed-milestones?${query.toString()}`
+    );
+  },
+
+  getBlockedItems: (
+    category: PortfolioCategoryCode = "all"
+  ) => {
+    const query = new URLSearchParams({
+      category,
+    });
+
+    return request<BlockedItem[]>(
+      `/executive/project-health/blocked-items?${query.toString()}`
+    );
+  },
+
+  getHealthTrend: () => {
+    return request<HealthTrendItem[]>(
+      `/executive/project-health/health-trend`
+    );
+  },
+};
+
+
+
+/* ================================== */
 /* ERROR CLASS */
 /* ================================== */
 
@@ -470,6 +569,35 @@ export const projectDrillDownKeys = {
   ) => [...projectDrillDownKeys.all, category, projectId ?? "default"] as const,
 };
 
+
+export const projectHealthKeys = {
+  all: ["project-health"] as const,
+
+  summary: (category: PortfolioCategoryCode) =>
+    [...projectHealthKeys.all, "summary", category] as const,
+
+  delayedMilestones: (
+    category: PortfolioCategoryCode
+  ) =>
+    [
+      ...projectHealthKeys.all,
+      "delayed-milestones",
+      category,
+    ] as const,
+
+  blockedItems: (
+    category: PortfolioCategoryCode
+  ) =>
+    [
+      ...projectHealthKeys.all,
+      "blocked-items",
+      category,
+    ] as const,
+
+  healthTrend: () =>
+    [...projectHealthKeys.all, "health-trend"] as const,
+};
+
 // /* ================================== */
 // /* REACT QUERY HOOKS - CATEGORIES */
 // /* ================================== */
@@ -536,6 +664,74 @@ export function useProjectDrillDown(
     queryKey: projectDrillDownKeys.detail(category, projectId),
     queryFn: () => projectDrillDownApi.getSummary(category, projectId),
     staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+
+/* ================================== */
+/* REACT QUERY HOOKS - PROJECT HEALTH */
+/* ================================== */
+
+export function useProjectHealthSummary(
+  category: PortfolioCategoryCode = "all"
+) {
+  return useQuery({
+    queryKey: projectHealthKeys.summary(category),
+
+    queryFn: () =>
+      projectHealthApi.getSummary(category),
+
+    staleTime: 60 * 1000,
+
+    retry: 1,
+  });
+}
+
+export function useDelayedMilestones(
+  category: PortfolioCategoryCode = "all"
+) {
+  return useQuery({
+    queryKey:
+      projectHealthKeys.delayedMilestones(category),
+
+    queryFn: () =>
+      projectHealthApi.getDelayedMilestones(
+        category
+      ),
+
+    staleTime: 60 * 1000,
+
+    retry: 1,
+  });
+}
+
+export function useBlockedItems(
+  category: PortfolioCategoryCode = "all"
+) {
+  return useQuery({
+    queryKey:
+      projectHealthKeys.blockedItems(category),
+
+    queryFn: () =>
+      projectHealthApi.getBlockedItems(category),
+
+    staleTime: 60 * 1000,
+
+    retry: 1,
+  });
+}
+
+export function useHealthTrend() {
+  return useQuery({
+    queryKey:
+      projectHealthKeys.healthTrend(),
+
+    queryFn: () =>
+      projectHealthApi.getHealthTrend(),
+
+    staleTime: 60 * 1000,
+
     retry: 1,
   });
 }

@@ -212,12 +212,13 @@ function HealthDonut({
     {
       label: "Delayed",
       value: healthCounts.Delayed,
-      color: "var(--rd)",
+      color: "#888780",
+      
     },
     {
       label: "Critical",
       value: healthCounts.Critical,
-      color: "#888780",
+      color: "var(--rd)",
     },
   ];
 
