@@ -3,7 +3,7 @@
 /* ================================== */
 
 import { useQuery } from "@tanstack/react-query";
-import { getAuthHeaders } from "@/lib/auth";
+import { getAuthToken } from "./auth";
 
 /* ================================== */
 /* CONFIG */
@@ -17,6 +17,7 @@ export const API_BASE_URL: string =
 /* ================================== */
 
 export type PortfolioCategoryCode = string;
+
 export type ProjectHealthLabel = string;
 export type ProjectHealthStatus = string;
 export type ProjectHealthSeverity = string | null;
@@ -352,6 +353,80 @@ export interface ProjectDrillDownResponse {
 }
 
 /* ================================== */
+/* REVENUE & BILLING TYPES */
+/* ================================== */
+
+export interface RevenueBillingSummary {
+  contractValue: number;
+  invoicedToDate: number;
+  billingReadyNow: number;
+  overdueReceivables: number;
+  totalProjects: number;
+  billingReadyProjects: number;
+  invoicedPct: number;
+}
+
+export interface RevenueBillingProject {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  clientName: string;
+  contractValue: number;
+  invoicedToDate: number;
+  progressPct: number;
+  billingReadyAmount: number;
+  status: string;
+  tone: string;
+}
+
+/* ================================== */
+/* PROJECT HEALTH TYPES */
+/* ================================== */
+
+export interface ProjectHealthSummaryItem {
+  status: ProjectHealthStatus;
+  label: string;
+  severity?: ProjectHealthSeverity;
+  value: number;
+  percentage: number;
+}
+
+export interface DelayedMilestoneItem {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  clientName: string;
+  pendingMilestones: number;
+  status: ProjectHealthStatus;
+  severity?: ProjectHealthSeverity;
+  label: string;
+  widthPct: number;
+}
+
+export interface BlockedItem {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  clientName: string;
+  blockedItems: number;
+  label: string;
+  widthPct: number;
+}
+
+export interface HealthTrendItem {
+  week: string;
+  onTrack: number;
+  atRisk: number;
+  delayed: number;
+  critical: number;
+}
+
+export type ProjectHealthSummaryResponse = ProjectHealthSummaryItem[];
+export type BlockedItemsResponse = BlockedItem[];
+export type DelayedMilestonesResponse = DelayedMilestoneItem[];
+export type HealthTrendResponse = HealthTrendItem[];
+
+/* ================================== */
 /* ERROR CLASS */
 /* ================================== */
 
@@ -374,12 +449,14 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const token = getAuthToken();
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...getAuthHeaders(),
       ...(options.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
 
@@ -415,12 +492,15 @@ async function request<T>(
 
 export function normalizeList<T>(res: unknown): T[] {
   if (Array.isArray(res)) return res;
+
   if (Array.isArray((res as { data?: unknown })?.data)) {
     return (res as { data: T[] }).data;
   }
+
   if (Array.isArray((res as { items?: unknown })?.items)) {
     return (res as { items: T[] }).items;
   }
+
   if (Array.isArray((res as { result?: unknown })?.result)) {
     return (res as { result: T[] }).result;
   }
@@ -465,12 +545,46 @@ export const portfolioApi = {
 
 export const portfolioOverviewApi = {
   getOverview: (category: PortfolioCategoryCode = "all") => {
-    const query = new URLSearchParams({
-      category,
-    });
+    const query = new URLSearchParams({ category });
 
     return request<PortfolioOverviewResponse>(
       `/executive/portfolio-overview?${query.toString()}`,
+    );
+  },
+};
+
+/* ================================== */
+/* PROJECT HEALTH API */
+/* ================================== */
+
+export const projectHealthApi = {
+  getSummary: (category: PortfolioCategoryCode = "all") => {
+    const query = new URLSearchParams({ category });
+
+    return request<ProjectHealthSummaryResponse>(
+      `/executive/project-health/summary?${query.toString()}`,
+    );
+  },
+
+  getBlockedItems: (category: PortfolioCategoryCode = "all") => {
+    const query = new URLSearchParams({ category });
+
+    return request<BlockedItemsResponse>(
+      `/executive/project-health/blocked-items?${query.toString()}`,
+    );
+  },
+
+  getDelayedMilestones: (category: PortfolioCategoryCode = "all") => {
+    const query = new URLSearchParams({ category });
+
+    return request<DelayedMilestonesResponse>(
+      `/executive/project-health/delayed-milestones?${query.toString()}`,
+    );
+  },
+
+  getHealthTrend: () => {
+    return request<HealthTrendResponse>(
+      "/executive/project-health/health-trend",
     );
   },
 };
@@ -516,14 +630,34 @@ export const projectDrillDownApi = {
 };
 
 /* ================================== */
+/* REVENUE & BILLING API */
+/* ================================== */
+
+export const revenueBillingApi = {
+  getSummary: (category: PortfolioCategoryCode = "all") => {
+    const query = new URLSearchParams({ category });
+
+    return request<RevenueBillingSummary>(
+      `/executive/revenue-billing/summary?${query.toString()}`,
+    );
+  },
+
+  getProjects: (category: PortfolioCategoryCode = "all") => {
+    const query = new URLSearchParams({ category });
+
+    return request<RevenueBillingProject[]>(
+      `/executive/revenue-billing/by-project?${query.toString()}`,
+    );
+  },
+};
+
+/* ================================== */
 /* APPROVAL BOTTLENECKS API */
 /* ================================== */
 
 export const approvalBottlenecksApi = {
   getOverview: (category: PortfolioCategoryCode = "all") => {
-    const query = new URLSearchParams({
-      category,
-    });
+    const query = new URLSearchParams({ category });
 
     return request<ApprovalBottlenecksResponse>(
       `/executive/approval-bottlenecks?${query.toString()}`,
@@ -566,6 +700,31 @@ export const projectDrillDownKeys = {
 
   detail: (category: PortfolioCategoryCode, projectId?: string | null) =>
     [...projectDrillDownKeys.all, category, projectId ?? "default"] as const,
+};
+
+export const revenueBillingKeys = {
+  all: ["revenue-billing"] as const,
+
+  summary: (category: PortfolioCategoryCode) =>
+    [...revenueBillingKeys.all, "summary", category] as const,
+
+  projects: (category: PortfolioCategoryCode) =>
+    [...revenueBillingKeys.all, "projects", category] as const,
+};
+
+export const projectHealthKeys = {
+  all: ["project-health"] as const,
+
+  summary: (category: PortfolioCategoryCode) =>
+    [...projectHealthKeys.all, "summary", category] as const,
+
+  blockedItems: (category: PortfolioCategoryCode) =>
+    [...projectHealthKeys.all, "blocked-items", category] as const,
+
+  delayedMilestones: (category: PortfolioCategoryCode) =>
+    [...projectHealthKeys.all, "delayed-milestones", category] as const,
+
+  healthTrend: () => [...projectHealthKeys.all, "health-trend"] as const,
 };
 
 export const approvalBottlenecksKeys = {
@@ -636,12 +795,82 @@ export function useProjectDrillDown(
 }
 
 /* ================================== */
+/* REACT QUERY HOOKS - REVENUE & BILLING */
+/* ================================== */
+
+export function useRevenueBillingSummary(
+  category: PortfolioCategoryCode = "all",
+) {
+  return useQuery({
+    queryKey: revenueBillingKeys.summary(category),
+    queryFn: () => revenueBillingApi.getSummary(category),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useRevenueBillingProjects(
+  category: PortfolioCategoryCode = "all",
+) {
+  return useQuery({
+    queryKey: revenueBillingKeys.projects(category),
+    queryFn: () => revenueBillingApi.getProjects(category),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+/* ================================== */
+/* REACT QUERY HOOKS - PROJECT HEALTH */
+/* ================================== */
+
+export function useProjectHealthSummary(
+  category: PortfolioCategoryCode = "all",
+) {
+  return useQuery({
+    queryKey: projectHealthKeys.summary(category),
+    queryFn: () => projectHealthApi.getSummary(category),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useBlockedItems(category: PortfolioCategoryCode = "all") {
+  return useQuery({
+    queryKey: projectHealthKeys.blockedItems(category),
+    queryFn: () => projectHealthApi.getBlockedItems(category),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useDelayedMilestones(
+  category: PortfolioCategoryCode = "all",
+) {
+  return useQuery({
+    queryKey: projectHealthKeys.delayedMilestones(category),
+    queryFn: () => projectHealthApi.getDelayedMilestones(category),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useHealthTrend() {
+  return useQuery({
+    queryKey: projectHealthKeys.healthTrend(),
+    queryFn: () => projectHealthApi.getHealthTrend(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+/* ================================== */
 /* REACT QUERY HOOKS - APPROVAL BOTTLENECKS */
 /* ================================== */
 
 export function useApprovalBottlenecks(
   category: PortfolioCategoryCode = "all",
-) { 
+) {
   return useQuery({
     queryKey: approvalBottlenecksKeys.detail(category),
     queryFn: () => approvalBottlenecksApi.getOverview(category),

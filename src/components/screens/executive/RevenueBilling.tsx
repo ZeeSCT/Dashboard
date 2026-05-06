@@ -1,5 +1,243 @@
-const html = "<div class=\"scr on\" id=\"screen-billing\">\n<div class=\"kr\">\n<div class=\"kc\"><div class=\"kl\">Contract value</div><div class=\"kv\">AED 187M</div><div class=\"ks\">24 projects</div></div>\n<div class=\"kc g\"><div class=\"kl\">Invoiced to date</div><div class=\"kv\">AED 94M</div><div class=\"ks\">50%</div></div>\n<div class=\"kc g\"><div class=\"kl\">Billing ready now</div><div class=\"kv\">AED 14.2M</div><div class=\"ks\">8 projects</div></div>\n<div class=\"kc w\"><div class=\"kl\">Pending milestone unlock</div><div class=\"kv\">AED 22.7M</div></div>\n<div class=\"kc d\"><div class=\"kl\">Overdue receivables</div><div class=\"kv\">AED 8.4M</div></div>\n</div>\n<div class=\"cd\">\n<div class=\"ch\">Billing readiness by project</div>\n<table><thead><tr><th>Project</th><th>Contract value</th><th>Invoiced</th><th>Progress</th><th>Billing ready</th><th>Status</th></tr></thead>\n<tbody>\n<tr><td>DIP Warehouse Complex</td><td>AED 38M</td><td>AED 31.5M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfg\" style=\"width:83%\"></div></div>83%</div></td><td style=\"color:var(--gn);font-weight:500\">AED 5.1M</td><td><span class=\"b bg2\">Ready</span></td></tr>\n<tr><td>Business Bay Infra</td><td>AED 29M</td><td>AED 25.8M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfg\" style=\"width:89%\"></div></div>89%</div></td><td style=\"color:var(--gn);font-weight:500\">AED 3.9M</td><td><span class=\"b bg2\">Ready</span></td></tr>\n<tr><td>JLT Tower Fit-out</td><td>AED 21M</td><td>AED 14.9M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfa\" style=\"width:71%\"></div></div>71%</div></td><td style=\"color:var(--gn);font-weight:500\">AED 3.4M</td><td><span class=\"b bg2\">Ready</span></td></tr>\n<tr><td>Al Barsha MEP Works</td><td>AED 42M</td><td>AED 17.6M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfr\" style=\"width:42%\"></div></div>42%</div></td><td style=\"color:var(--am);font-weight:500\">AED 1.8M</td><td><span class=\"b ba\">Partial</span></td></tr>\n<tr><td>DAFZA Industrial Ph.2</td><td>AED 31M</td><td>AED 18M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfa\" style=\"width:58%\"></div></div>58%</div></td><td style=\"color:var(--t3)\">\u2014</td><td><span class=\"b bgr\">Not ready</span></td></tr>\n<tr><td>Mirdif Villa Complex</td><td>AED 26M</td><td>AED 17.4M</td><td><div style=\"display:flex;align-items:center;gap:5px\"><div class=\"bw\" style=\"width:54px\"><div class=\"bf bfa\" style=\"width:67%\"></div></div>67%</div></td><td style=\"color:var(--t3)\">\u2014</td><td><span class=\"b bgr\">Not ready</span></td></tr>\n</tbody></table>\n</div>\n</div>";
+"use client";
 
-export default function RevenueBilling() {
-  return <div className="html-screen" dangerouslySetInnerHTML={{ __html: html }} />;
+import {
+  type PortfolioCategoryCode,
+  useRevenueBillingSummary,
+  useRevenueBillingProjects,
+  type RevenueBillingProject,
+} from "@/lib/api";
+
+type RevenueBillingProps = {
+  selectedPortfolioCategory?: PortfolioCategoryCode;
+};
+
+type Tone = "g" | "w" | "d" | "";
+
+interface KpiItem {
+  label: string;
+  value: string;
+  subtext?: string;
+  tone?: Tone;
+}
+
+function formatMoney(value?: number) {
+  if (!value) return "AED 0";
+
+  const million = value / 1_000_000;
+
+  if (million >= 1) {
+    return `AED ${million.toFixed(1)}M`;
+  }
+
+  return `AED ${(value / 1_000).toFixed(0)}K`;
+}
+
+function getProgressClass(tone?: string) {
+  if (tone === "g") return "bf bfg";
+  if (tone === "w") return "bf bfa";
+  return "bf bfr";
+}
+
+function getBillingReadyColor(tone?: string) {
+  if (tone === "g") return "var(--gn)";
+  if (tone === "w") return "var(--am)";
+  return "var(--rd)";
+}
+
+function getStatusBadgeClass(tone?: string) {
+  if (tone === "g") return "b bg2";
+  if (tone === "w") return "b ba";
+  return "b bgr";
+}
+
+function getStatusLabel(status: string) {
+  if (status === "READY") return "Ready";
+  if (status === "PARTIAL") return "Partial";
+  return "Not ready";
+}
+
+function KpiCard({ item }: { item: KpiItem }) {
+  return (
+    <div className={`kc ${item.tone ?? ""}`.trim()}>
+      <div className="kl">{item.label}</div>
+      <div className="kv">{item.value}</div>
+      {item.subtext ? <div className="ks">{item.subtext}</div> : null}
+    </div>
+  );
+}
+
+function BillingKpis({
+  summary,
+  activeProjects,
+}: {
+  summary: Awaited<ReturnType<typeof useRevenueBillingSummary>>["data"];
+  activeProjects: number;
+}) {
+  const kpis: KpiItem[] = summary
+    ? [
+        {
+          label: "Contract value",
+          value: formatMoney(summary.contractValue),
+          subtext: `${activeProjects} active projects`,
+          tone: "g",
+        },
+        {
+          label: "Invoiced to date",
+          value: formatMoney(summary.invoicedToDate),
+          subtext: `${summary.invoicedPct ?? 0}%`,
+          tone: "g",
+        },
+        {
+          label: "Billing ready now",
+          value: formatMoney(summary.billingReadyNow),
+          subtext: `${summary.billingReadyProjects ?? 0} projects`,
+          tone: "g",
+        },
+        {
+          label: "Overdue receivables",
+          value: formatMoney(summary.overdueReceivables),
+          tone: "d",
+        },
+      ]
+    : [];
+
+  return (
+    <div className="kr">
+      {kpis.map((item) => (
+        <KpiCard key={item.label} item={item} />
+      ))}
+    </div>
+  );
+}
+
+function BillingTable({ rows }: { rows: RevenueBillingProject[] }) {
+  return (
+    <div className="cd">
+      <div className="ch">Billing readiness by project</div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Contract value</th>
+            <th>Invoiced</th>
+            <th>Progress</th>
+            <th>Billing ready</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.length ? (
+            rows.map((row) => (
+              <tr key={row.projectId}>
+                <td>{row.projectName}</td>
+
+                <td>{formatMoney(row.contractValue)}</td>
+
+                <td>{formatMoney(row.invoicedToDate)}</td>
+
+                <td>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                    }}
+                  >
+                    <div className="bw">
+                      <div
+                        className={getProgressClass(row.tone)}
+                        style={{
+                          width: `${row.progressPct}%`,
+                        }}
+                      />
+                    </div>
+
+                    {row.progressPct}%
+                  </div>
+                </td>
+
+                <td
+                  style={{
+                    color: getBillingReadyColor(row.tone),
+                    fontWeight: 500,
+                  }}
+                >
+                  {formatMoney(row.billingReadyAmount)}
+                </td>
+
+                <td>
+                  <span className={getStatusBadgeClass(row.tone)}>
+                    {getStatusLabel(row.status)}
+                  </span>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={6} style={{ color: "var(--t2)", fontSize: 13 }}>
+                No billing data found for this portfolio.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default function RevenueBilling({
+  selectedPortfolioCategory = "all",
+}: RevenueBillingProps) {
+  const category = selectedPortfolioCategory;
+
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    error,
+  } = useRevenueBillingSummary(category);
+
+  const {
+    data: projects = [],
+    isLoading: projectsLoading,
+    isError: projectsError,
+  } = useRevenueBillingProjects(category);
+
+  if (summaryLoading || projectsLoading) {
+    return (
+      <div className="scr on" id="screen-billing">
+        <div className="cd">
+          <div className="ch">Revenue & billing</div>
+          <div style={{ color: "var(--t2)", fontSize: 13 }}>
+            Loading revenue and billing data...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (summaryError || projectsError) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to load revenue and billing data";
+
+    return (
+      <div className="scr on" id="screen-billing">
+        <div className="cd">
+          <div className="ch">Revenue & billing</div>
+          <div style={{ color: "var(--rd)", fontSize: 13 }}>{message}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="scr on" id="screen-billing">
+      <BillingKpis summary={summary} activeProjects={projects.length} />
+      <BillingTable rows={projects} />
+    </div>
+  );
 }
