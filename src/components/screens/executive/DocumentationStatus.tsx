@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ApiError,
-  DocumentationOverdueApproval,
-  DocumentationRegisterItem,
-  DocumentationStage,
-  DocumentationStatusLabel,
-  DocumentationStatusSummaryItem,
-  PortfolioCategoryCode,
+  type DocumentationOverdueApproval,
+  type DocumentationRegisterItem,
+  type DocumentationStage,
+  type DocumentationStatusLabel,
+  type DocumentationStatusSeverity,
+  type DocumentationStatusSummaryItem,
+  type PortfolioCategoryCode,
   useDocumentationStatus,
+  useExecutiveLookups,
 } from "@/lib/api";
 
 type DocumentationStatusProps = {
@@ -21,7 +23,7 @@ type StageTab = {
   label: string;
 };
 
-const tabs: StageTab[] = [
+const fallbackTabs: StageTab[] = [
   { key: "pre-construction", label: "Pre-construction" },
   { key: "design", label: "Design" },
   { key: "procurement", label: "Procurement" },
@@ -30,23 +32,98 @@ const tabs: StageTab[] = [
   { key: "closeout", label: "Closeout" },
 ];
 
-const badgeClassByStatus: Record<DocumentationStatusLabel, string> = {
-  Approved: "bg2",
-  "Under review": "bb",
-  "In preparation": "bgr",
-  Overdue: "br",
-  Rejected: "br",
-  "At risk": "ba",
-};
+function getSeverityFromStatus(
+  status?: DocumentationStatusLabel | string,
+  code?: string,
+  severity?: DocumentationStatusSeverity,
+): DocumentationStatusSeverity {
+  if (severity) return severity;
 
-const progressClassByStatus: Partial<Record<DocumentationStatusLabel, string>> =
-  {
-    Approved: "bfg",
-    "Under review": "bfb",
-    Overdue: "bfr",
-    Rejected: "bfr",
-    "At risk": "bfa",
-  };
+  const key = (code || status || "").toLowerCase();
+
+  if (key.includes("approved")) return "success";
+
+  if (key.includes("under-review") || key.includes("under review")) {
+    return "info";
+  }
+
+  if (key.includes("at-risk") || key.includes("at risk")) {
+    return "warning";
+  }
+
+  if (key.includes("overdue") || key.includes("rejected")) {
+    return "danger";
+  }
+
+  if (key.includes("in-preparation") || key.includes("in preparation")) {
+    return "neutral";
+  }
+
+  return "neutral";
+}
+
+function getBadgeClassBySeverity(severity?: DocumentationStatusSeverity) {
+  switch (severity) {
+    case "success":
+      return "bg2";
+
+    case "info":
+      return "bb";
+
+    case "warning":
+      return "ba";
+
+    case "danger":
+      return "br";
+
+    case "neutral":
+      return "bgr";
+
+    default:
+      return "bgr";
+  }
+}
+
+function getProgressClassBySeverity(severity?: DocumentationStatusSeverity) {
+  switch (severity) {
+    case "success":
+      return "bfg";
+
+    case "info":
+      return "bfb";
+
+    case "warning":
+      return "bfa";
+
+    case "danger":
+      return "bfr";
+
+    default:
+      return "";
+  }
+}
+
+function getProgressColorBySeverity(severity?: DocumentationStatusSeverity) {
+  switch (severity) {
+    case "success":
+      return "var(--gn)";
+
+    case "info":
+      return "var(--bl)";
+
+    case "warning":
+      return "var(--am)";
+
+    case "danger":
+      return "var(--rd)";
+
+    case "neutral":
+      return "#888780";
+
+    default:
+      return "#888780";
+  }
+}
 
 export default function DocumentationStatus({
   selectedPortfolioCategory = "all",
@@ -54,9 +131,30 @@ export default function DocumentationStatus({
   const [activeStage, setActiveStage] =
     useState<DocumentationStage>("pre-construction");
 
+  const { data: lookups } = useExecutiveLookups();
+
+  const tabs = useMemo<StageTab[]>(() => {
+    const stages = lookups?.documentationStages ?? [];
+
+    if (!stages.length) return fallbackTabs;
+
+    return stages.map((stage) => ({
+      key: stage.code,
+      label: stage.label,
+    }));
+  }, [lookups?.documentationStages]);
+
+  useEffect(() => {
+    const exists = tabs.some((tab) => tab.key === activeStage);
+
+    if (!exists && tabs[0]) {
+      setActiveStage(tabs[0].key);
+    }
+  }, [tabs, activeStage]);
+
   const { data, isLoading, isError, error } = useDocumentationStatus(
     selectedPortfolioCategory,
-    activeStage
+    activeStage,
   );
 
   const kpis = data?.kpis ?? {
@@ -78,6 +176,7 @@ export default function DocumentationStatus({
       <div className="html-screen">
         <div className="scr on" id="screen-docstatus">
           <DocumentationTabs
+            tabs={tabs}
             activeStage={activeStage}
             onStageChange={setActiveStage}
           />
@@ -101,6 +200,7 @@ export default function DocumentationStatus({
       <div className="html-screen">
         <div className="scr on" id="screen-docstatus">
           <DocumentationTabs
+            tabs={tabs}
             activeStage={activeStage}
             onStageChange={setActiveStage}
           />
@@ -120,6 +220,7 @@ export default function DocumentationStatus({
     <div className="html-screen">
       <div className="scr on" id="screen-docstatus">
         <DocumentationTabs
+          tabs={tabs}
           activeStage={activeStage}
           onStageChange={setActiveStage}
         />
@@ -127,37 +228,46 @@ export default function DocumentationStatus({
         <section className="kr">
           <MetricCard
             label="Total documents"
-            value={kpis.totalDocuments}
+            value={kpis.totalDocuments ?? 0}
             subtext={data?.selectedCategoryLabel ?? "Selected portfolio"}
           />
 
           <MetricCard
             label="Approved"
-            value={kpis.approved}
-            subtext={`${getPercent(kpis.approved, kpis.totalDocuments)}%`}
+            value={kpis.approved ?? 0}
+            subtext={`${getPercent(
+              kpis.approved ?? 0,
+              kpis.totalDocuments ?? 0,
+            )}%`}
             tone="g"
           />
 
           <MetricCard
             label="Under review"
-            value={kpis.underReview}
-            subtext={`${getPercent(kpis.underReview, kpis.totalDocuments)}%`}
+            value={kpis.underReview ?? 0}
+            subtext={`${getPercent(
+              kpis.underReview ?? 0,
+              kpis.totalDocuments ?? 0,
+            )}%`}
             tone="w"
           />
 
           <MetricCard
             label="Overdue"
-            value={kpis.overdue}
-            subtext={`${getPercent(kpis.overdue, kpis.totalDocuments)}%`}
+            value={kpis.overdue ?? 0}
+            subtext={`${getPercent(
+              kpis.overdue ?? 0,
+              kpis.totalDocuments ?? 0,
+            )}%`}
             tone="d"
           />
 
           <MetricCard
             label="In preparation"
-            value={kpis.inPreparation}
+            value={kpis.inPreparation ?? 0}
             subtext={`${getPercent(
-              kpis.inPreparation,
-              kpis.totalDocuments
+              kpis.inPreparation ?? 0,
+              kpis.totalDocuments ?? 0,
             )}%`}
           />
         </section>
@@ -170,7 +280,9 @@ export default function DocumentationStatus({
 
         <DocumentRegisterTable
           register={register}
-          selectedCategoryLabel={data?.selectedCategoryLabel ?? "Selected portfolio"}
+          selectedCategoryLabel={
+            data?.selectedCategoryLabel ?? "Selected portfolio"
+          }
         />
       </div>
     </div>
@@ -178,9 +290,11 @@ export default function DocumentationStatus({
 }
 
 function DocumentationTabs({
+  tabs,
   activeStage,
   onStageChange,
 }: {
+  tabs: StageTab[];
   activeStage: DocumentationStage;
   onStageChange: (stage: DocumentationStage) => void;
 }) {
@@ -237,21 +351,31 @@ function StatusSummaryCard({
             gap: 8,
           }}
         >
-          {statusSummary.map((item) => (
-            <div key={item.label}>
-              <div className="pl">
-                <span>{item.label}</span>
-                <span style={{ fontWeight: 500 }}>{item.value}</span>
-              </div>
+          {statusSummary.map((item) => {
+            const severity = getSeverityFromStatus(
+              item.label,
+              item.code,
+              item.severity,
+            );
 
-              <div className="bw">
-                <div
-                  className={`bf ${progressClassByStatus[item.label] ?? ""}`}
-                  style={getProgressBarStyle(item.label, item.percent)}
-                />
+            return (
+              <div key={item.code ?? item.label}>
+                <div className="pl">
+                  <span>{item.label}</span>
+                  <span style={{ fontWeight: 500 }}>{item.value}</span>
+                </div>
+
+                <div className="bw">
+                  <div
+                    className={`bf ${getProgressClassBySeverity(
+                      severity,
+                    )}`.trim()}
+                    style={getProgressBarStyle(item.percent, severity)}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="ks">No document status data found.</div>
@@ -270,30 +394,38 @@ function OverdueApprovalsCard({
       <div className="ch">Overdue approvals</div>
 
       {overdueApprovals.length > 0 ? (
-        overdueApprovals.map((item) => (
-          <div className="tr2" key={item.id}>
-            <div
-              className="td2"
-              style={{
-                background:
-                  item.severity === "danger" ? "var(--rd)" : "var(--am)",
-              }}
-            />
+        overdueApprovals.map((item) => {
+          const severity = getSeverityFromStatus(
+            item.status,
+            item.statusCode,
+            item.severity,
+          );
 
-            <div>
-              <div style={{ fontWeight: 500 }}>{item.title}</div>
-
+          return (
+            <div className="tr2" key={item.id}>
               <div
+                className="td2"
                 style={{
-                  color: "var(--t2)",
-                  fontSize: 12,
+                  background:
+                    severity === "danger" ? "var(--rd)" : "var(--am)",
                 }}
-              >
-                {item.days} days — {item.approver}
+              />
+
+              <div>
+                <div style={{ fontWeight: 500 }}>{item.title}</div>
+
+                <div
+                  style={{
+                    color: "var(--t2)",
+                    fontSize: 12,
+                  }}
+                >
+                  {item.days} days — {item.approver}
+                </div>
               </div>
             </div>
-          </div>
-        ))
+          );
+        })
       ) : (
         <div className="tr2">
           <div
@@ -346,22 +478,30 @@ function DocumentRegisterTable({
         </thead>
 
         <tbody>
-          {register.map((item) => (
-            <tr key={item.id}>
-              <td>{item.document}</td>
-              <td>{item.project}</td>
-              <td>{item.revision}</td>
-              <td>{item.submitted}</td>
-              <td>{item.approver}</td>
-              <td>
-                <span className={`b ${badgeClassByStatus[item.status]}`}>
-                  {item.status}
-                </span>
-              </td>
-            </tr>
-          ))}
+          {register.length > 0 ? (
+            register.map((item) => {
+              const severity = getSeverityFromStatus(
+                item.status,
+                item.statusCode,
+                item.statusSeverity,
+              );
 
-          {register.length === 0 && (
+              return (
+                <tr key={item.id}>
+                  <td>{item.document}</td>
+                  <td>{item.project}</td>
+                  <td>{item.revision}</td>
+                  <td>{item.submitted}</td>
+                  <td>{item.approver}</td>
+                  <td>
+                    <span className={`b ${getBadgeClassBySeverity(severity)}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
             <tr>
               <td colSpan={6}>
                 No documents found for this stage and portfolio category.
@@ -381,17 +521,11 @@ function getPercent(value: number, total: number) {
 }
 
 function getProgressBarStyle(
-  status: DocumentationStatusLabel,
-  percent: number
+  percent: number,
+  severity?: DocumentationStatusSeverity,
 ) {
-  if (status === "In preparation") {
-    return {
-      width: `${percent}%`,
-      background: "#888780",
-    };
-  }
-
   return {
     width: `${percent}%`,
+    background: getProgressColorBySeverity(severity),
   };
 }

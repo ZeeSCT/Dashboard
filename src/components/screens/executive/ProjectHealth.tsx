@@ -1,7 +1,11 @@
 "use client";
 
 import {
+  type BlockedItem,
+  type DelayedMilestoneItem,
+  type HealthTrendItem,
   type PortfolioCategoryCode,
+  type ProjectHealthSummaryItem,
   useBlockedItems,
   useDelayedMilestones,
   useHealthTrend,
@@ -14,9 +18,7 @@ type ProjectHealthProps = {
   selectedPortfolioCategory?: PortfolioCategoryCode;
 };
 
-function getTone(
-  status: string
-): HealthTone {
+function getTone(status: string): HealthTone {
   switch (status) {
     case "ON_TRACK":
       return "g";
@@ -26,6 +28,7 @@ function getTone(
 
     case "DELAYED":
       return "";
+
     case "CRITICAL":
       return "d";
 
@@ -46,46 +49,24 @@ function getStatusColor(status: string) {
       return "#888780";
 
     case "CRITICAL":
-      return "var(--rd)";      
+      return "var(--rd)";
 
     default:
       return "var(--gn)";
   }
 }
 
-function KpiCard({ item }: { item: any }) {
+function KpiCard({ item }: { item: ProjectHealthSummaryItem }) {
   return (
     <div className={`kc ${getTone(item.status)}`.trim()}>
       <div className="kl">{item.label}</div>
-      <div className="kv">{item.value}</div>
-      <div className="ks">{item.percentage}%</div>
-function KpiCard({
-  item,
-}: {
-  item: any;
-}) {
-  return (
-    <div
-      className={`kc ${getTone(
-        item.status
-      )}`.trim()}
-    >
-      <div className="kl">
-        {item.label}
-      </div>
-
-      <div className="kv">
-        {item.value}
-      </div>
-
-      <div className="ks">
-        {item.percentage}%
-      </div>
+      <div className="kv">{item.value ?? 0}</div>
+      <div className="ks">{item.percentage ?? 0}%</div>
     </div>
   );
 }
 
-function KpiRow({ kpis }: { kpis: any[] }) {
+function KpiRow({ kpis }: { kpis: ProjectHealthSummaryItem[] }) {
   if (!Array.isArray(kpis)) return null;
 
   return (
@@ -100,13 +81,11 @@ function KpiRow({ kpis }: { kpis: any[] }) {
 function DelayedMilestonesCard({
   delayedMilestones,
 }: {
-  delayedMilestones: any[];
+  delayedMilestones: DelayedMilestoneItem[];
 }) {
   return (
     <div className="cd">
-      <div className="ch">
-        Delayed milestones by project
-      </div>
+      <div className="ch">Delayed milestones by project</div>
 
       {delayedMilestones.length ? (
         delayedMilestones.map((item) => (
@@ -124,28 +103,6 @@ function DelayedMilestonesCard({
               >
                 {item.label}
               </div>
-      {delayedMilestones.map((item) => (
-        <div
-          className="cbr"
-          key={item.projectId}
-        >
-          <span className="cbl">
-            {item.projectName}
-          </span>
-
-          <div className="cbt">
-            <div
-              className="cbi"
-              style={{
-                width: `${item.widthPct}%`,
-                background:
-                  getStatusColor(
-                    item.status
-                  ),
-                color: "#fff",
-              }}
-            >
-              {item.label}
             </div>
           </div>
         ))
@@ -158,41 +115,14 @@ function DelayedMilestonesCard({
   );
 }
 
-function BlockedItemsCard({ blockedItems }: { blockedItems: any[] }) {
-function BlockedItemsCard({
-  blockedItems,
-}: {
-  blockedItems: any[];
-}) {
+function BlockedItemsCard({ blockedItems }: { blockedItems: BlockedItem[] }) {
   return (
     <div className="cd">
-      <div className="ch">
-        Blocked items by project
-      </div>
+      <div className="ch">Blocked items by project</div>
 
       {blockedItems.length ? (
         blockedItems.map((item) => (
           <div className="tr2" key={item.projectId}>
-      {blockedItems.map((item) => (
-        <div
-          className="tr2"
-          key={item.projectId}
-        >
-          <div
-            className="td2"
-            style={{
-              background:
-                item.blockedItems > 0
-                  ? "var(--rd)"
-                  : "var(--gn)",
-            }}
-          />
-
-          <div>
-            <div className="font-medium">
-              {item.projectName}
-            </div>
-
             <div
               className="td2"
               style={{
@@ -211,8 +141,6 @@ function BlockedItemsCard({
               >
                 {item.label}
               </div>
-            >
-              {item.label}
             </div>
           </div>
         ))
@@ -248,27 +176,15 @@ function TrendStatusRow({
   );
 }
 
-function HealthTrendCard({ healthTrend }: { healthTrend: any[] }) {
-function HealthTrendCard({
-  healthTrend,
-}: {
-  healthTrend: any[];
-}) {
+function HealthTrendCard({ healthTrend }: { healthTrend: HealthTrendItem[] }) {
   return (
     <div className="cd">
-      <div className="ch">
-        Health trend — last 4 weeks
-      </div>
+      <div className="ch">Health trend — last 4 weeks</div>
 
       <div className="wg">
         {healthTrend.map((week) => (
-          <div
-            className="wc"
-            key={week.week}
-          >
-            <div className="wl">
-              {week.week}
-            </div>
+          <div className="wc" key={week.week}>
+            <div className="wl">{week.week}</div>
 
             <TrendStatusRow
               color="var(--gn)"
@@ -305,18 +221,42 @@ export default function ProjectHealth({
 }: ProjectHealthProps) {
   const category = selectedPortfolioCategory;
 
-  const { data: kpis = [], isLoading: summaryLoading, isError, error } =
-    useProjectHealthSummary(category);
+  const {
+    data: kpis = [],
+    isLoading: summaryLoading,
+    isError: summaryError,
+    error: summaryErrorData,
+  } = useProjectHealthSummary(category);
 
-  const { data: delayedMilestones = [], isLoading: milestonesLoading } =
-    useDelayedMilestones(category);
+  const {
+    data: delayedMilestones = [],
+    isLoading: milestonesLoading,
+    isError: milestonesError,
+    error: milestonesErrorData,
+  } = useDelayedMilestones(category);
 
-  const { data: blockedItems = [], isLoading: blockedLoading } =
-    useBlockedItems(category);
+  const {
+    data: blockedItems = [],
+    isLoading: blockedLoading,
+    isError: blockedError,
+    error: blockedErrorData,
+  } = useBlockedItems(category);
 
   const { data: healthTrend = [] } = useHealthTrend();
 
-  if (summaryLoading || milestonesLoading || blockedLoading) {
+  const isLoading = summaryLoading || milestonesLoading || blockedLoading;
+  const isError = summaryError || milestonesError || blockedError;
+
+  const error =
+    summaryErrorData instanceof Error
+      ? summaryErrorData
+      : milestonesErrorData instanceof Error
+        ? milestonesErrorData
+        : blockedErrorData instanceof Error
+          ? blockedErrorData
+          : null;
+
+  if (isLoading) {
     return (
       <div className="scr on" id="screen-health">
         <div className="cd">
@@ -330,14 +270,13 @@ export default function ProjectHealth({
   }
 
   if (isError) {
-    const message =
-      error instanceof Error ? error.message : "Unable to load project health";
-
     return (
       <div className="scr on" id="screen-health">
         <div className="cd">
           <div className="ch">Project health</div>
-          <div style={{ color: "var(--rd)", fontSize: 13 }}>{message}</div>
+          <div style={{ color: "var(--rd)", fontSize: 13 }}>
+            {error?.message ?? "Unable to load project health"}
+          </div>
         </div>
       </div>
     );
@@ -353,51 +292,6 @@ export default function ProjectHealth({
       </div>
 
       <HealthTrendCard healthTrend={healthTrend} />
-export default function ProjectHealth() {
-  const {
-    data: kpis = [],
-    isLoading: summaryLoading,
-  } =
-    useProjectHealthSummary();
-
-  const {
-    data: delayedMilestones = [],
-  } = useDelayedMilestones();
-
-  const {
-    data: blockedItems = [],
-  } = useBlockedItems();
-
-  const {
-    data: healthTrend = [],
-  } = useHealthTrend();
-
-  if (summaryLoading) {
-    return <div>Loading...</div>;
-  }
-
-  return (
-    <div
-      className="scr on"
-      id="screen-health"
-    >
-      <KpiRow kpis={kpis} />
-
-      <div className="gr c2">
-        <DelayedMilestonesCard
-          delayedMilestones={
-            delayedMilestones
-          }
-        />
-
-        <BlockedItemsCard
-          blockedItems={blockedItems}
-        />
-      </div>
-
-      <HealthTrendCard
-        healthTrend={healthTrend}
-      />
     </div>
   );
 }

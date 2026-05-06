@@ -2,11 +2,12 @@
 
 import { useMemo } from "react";
 import {
-  ApprovalBottleneckApproverType,
-  ApprovalBottleneckItem,
-  ApprovalBottleneckPendingApproval,
-  ApprovalBottleneckStatus,
-  PortfolioCategoryCode,
+  type ApprovalBottleneckApproverType,
+  type ApprovalBottleneckItem,
+  type ApprovalBottleneckPendingApproval,
+  type ApprovalBottleneckStatus,
+  type ApprovalBottleneckSeverity,
+  type PortfolioCategoryCode,
   useApprovalBottlenecks,
 } from "@/lib/api";
 
@@ -21,7 +22,30 @@ interface ApprovalBottlenecksKpiCard {
   tone?: "g" | "w" | "d";
 }
 
-function getBadgeClass(status: ApprovalBottleneckStatus) {
+function getBadgeClassBySeverity(
+  severity?: ApprovalBottleneckSeverity,
+  status?: ApprovalBottleneckStatus,
+) {
+  switch (severity) {
+    case "danger":
+      return "b br";
+
+    case "warning":
+      return "b ba";
+
+    case "info":
+      return "b bb";
+
+    case "success":
+      return "b bg2";
+
+    case "neutral":
+      return "b bgr";
+
+    default:
+      break;
+  }
+
   switch (status) {
     case "Overdue":
       return "b br";
@@ -75,23 +99,25 @@ function getOverdueDotColor(daysOverdue: number) {
   return "var(--am)";
 }
 
-function getDaysPendingStyle(status: ApprovalBottleneckStatus) {
-  switch (status) {
-    case "Overdue":
-      return {
-        color: "var(--rd)",
-        fontWeight: 500,
-      };
-
-    case "At risk":
-      return {
-        color: "var(--am)",
-        fontWeight: 500,
-      };
-
-    default:
-      return {};
+function getDaysPendingStyle(
+  status: ApprovalBottleneckStatus,
+  severity?: ApprovalBottleneckSeverity,
+) {
+  if (severity === "danger" || status === "Overdue") {
+    return {
+      color: "var(--rd)",
+      fontWeight: 500,
+    };
   }
+
+  if (severity === "warning" || status === "At risk") {
+    return {
+      color: "var(--am)",
+      fontWeight: 500,
+    };
+  }
+
+  return {};
 }
 
 function formatAverageDays(value: number) {
@@ -103,8 +129,7 @@ export default function ApprovalBottlenecks({
 }: ApprovalBottlenecksProps) {
   const category = selectedPortfolioCategory;
 
-  const { data, isLoading, isError, error } =
-    useApprovalBottlenecks(category);
+  const { data, isLoading, isError, error } = useApprovalBottlenecks(category);
 
   const kpis = useMemo<ApprovalBottlenecksKpiCard[]>(() => {
     if (!data) return [];
@@ -113,7 +138,10 @@ export default function ApprovalBottlenecks({
       {
         label: "Total pending",
         value: data.kpis.totalPending,
-        subtext: category === "all" ? "All projects" : "Selected portfolio",
+        subtext:
+          category === "all"
+            ? "All projects"
+            : data.selectedCategoryLabel ?? "Selected portfolio",
         tone: data.kpis.totalPending > 0 ? "d" : "g",
       },
       {
@@ -139,6 +167,7 @@ export default function ApprovalBottlenecks({
           data.kpis.approvedThisMonthChangePct >= 0
             ? `+${data.kpis.approvedThisMonthChangePct}%`
             : `${data.kpis.approvedThisMonthChangePct}%`,
+        tone: "g",
       },
     ];
   }, [data, category]);
@@ -198,307 +227,154 @@ export default function ApprovalBottlenecks({
       </div>
 
       <div className="gr c2">
-        <div className="cd">
-          <div className="ch">Bottleneck by approver type</div>
-
-          {data.bottlenecks.map((item: ApprovalBottleneckItem) => (
-            <div key={item.approverType} className="cbr">
-              <span className="cbl">{item.approverType}</span>
-
-              <div className="cbt">
-                <div
-                  className="cbi"
-                  style={{
-                    width: `${item.widthPercent}%`,
-                    ...getApproverBarColor(item.approverType),
-                  }}
-                >
-                  {item.pendingCount} pending
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {data.bottlenecks.length === 0 ? (
-            <div style={{ color: "var(--t2)", fontSize: 13 }}>
-              No approver bottlenecks for this portfolio.
-            </div>
-          ) : null}
-        </div>
-
-        <div className="cd">
-          <div className="ch">Most overdue</div>
-
-          {data.mostOverdue.map((item) => (
-            <div key={item.id} className="tr2">
-              <div
-                className="td2"
-                style={{
-                  background: getOverdueDotColor(item.daysOverdue),
-                }}
-              />
-
-              <div>
-                <div style={{ fontWeight: 500 }}>
-                  {item.project} — {item.document}
-                </div>
-
-                <div style={{ color: "var(--t2)", fontSize: 12 }}>
-                  {item.approverType} — {item.daysOverdue} days overdue
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {data.mostOverdue.length === 0 ? (
-            <div style={{ color: "var(--t2)", fontSize: 13 }}>
-              No overdue approvals for this portfolio.
-            </div>
-          ) : null}
-        </div>
+        <ApproverBottlenecksCard bottlenecks={data.bottlenecks} />
+        <MostOverdueCard mostOverdue={data.mostOverdue} />
       </div>
 
-      <div className="cd">
-        <div className="ch">All pending approvals</div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Document</th>
-              <th>Project</th>
-              <th>Approver</th>
-              <th>Submitted</th>
-              <th>Days pending</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {data.pendingApprovals.map(
-              (approval: ApprovalBottleneckPendingApproval) => (
-                <tr key={approval.id}>
-                  <td>{approval.document}</td>
-                  <td>{approval.project}</td>
-                  <td>{approval.approver}</td>
-                  <td>{approval.submitted}</td>
-                  <td style={getDaysPendingStyle(approval.status)}>
-                    {approval.daysPending}d
-                  </td>
-                  <td>
-                    <span className={getBadgeClass(approval.status)}>
-                      {approval.status}
-                    </span>
-                  </td>
-                </tr>
-              ),
-            )}
-
-            {data.pendingApprovals.length === 0 ? (
-              <tr>
-                <td colSpan={6} style={{ color: "var(--t2)", fontSize: 13 }}>
-                  No pending approvals found.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-type Tone = "g" | "w" | "d" | "";
-
-interface KpiItem {
-  label: string;
-  value: string;
-  subtext?: string;
-  tone?: Tone;
-}
-
-interface BottleneckItem {
-  type: string;
-  pending: number;
-  width: number;
-  tone: Tone;
-}
-
-interface OverdueItem {
-  title: string;
-  project: string;
-  category: string;
-  days: string;
-  tone: Tone;
-}
-
-interface ApprovalRow {
-  document: string;
-  project: string;
-  approver: string;
-  submitted: string;
-  days: string;
-  status: "Overdue" | "At risk" | "Under review";
-  tone: Tone;
-}
-
-// ---------------- KPI CARD ----------------
-function KpiCard({ item }: { item: KpiItem }) {
-  return (
-    <div className={`kc ${item.tone ?? ""}`.trim()}>
-      <div className="kl">{item.label}</div>
-      <div className="kv">{item.value}</div>
-      {item.subtext && <div className="ks">{item.subtext}</div>}
+      <PendingApprovalsTable pendingApprovals={data.pendingApprovals} />
     </div>
   );
 }
 
-// ---------------- MAIN COMPONENT ----------------
-export default function ApprovalBottlenecks() {
-  const kpis: KpiItem[] = [
-    { label: "Total pending", value: "37", subtext: "All projects", tone: "d" },
-    { label: "Overdue (>7d)", value: "12", tone: "d" },
-    { label: "Avg. approval time", value: "6.4d", subtext: "SLA: 3 days", tone: "w" },
-    { label: "Approved this month", value: "58", subtext: "+12%", tone: "g" },
-  ];
-
-  const bottlenecks: BottleneckItem[] = [
-    { type: "Client", pending: 14, width: 60, tone: "d" },
-    { type: "Consultant", pending: 11, width: 45, tone: "w" },
-    { type: "Authority", pending: 6, width: 25, tone: "w" },
-    { type: "Internal", pending: 6, width: 25, tone: "g" },
-  ];
-
-  const overdue: OverdueItem[] = [
-    { title: "Al Barsha MEP — IFC Drawing Rev.3", project: "Client", category: "18 days overdue", days: "18d", tone: "d" },
-    { title: "DAFZA — Civil Method Statement", project: "Authority", category: "14 days overdue", days: "14d", tone: "d" },
-    { title: "JLT Tower — Shop Drawing Set C", project: "Consultant", category: "11 days overdue", days: "11d", tone: "d" },
-    { title: "DIP Warehouse — O&M Manual Draft", project: "Client", category: "8 days overdue", days: "8d", tone: "w" },
-  ];
-
-  const approvals: ApprovalRow[] = [
-    { document: "IFC Drawing Rev.3", project: "Al Barsha MEP", approver: "Client (EMAAR)", submitted: "17 Mar 2026", days: "18d", status: "Overdue", tone: "d" },
-    { document: "Civil Method Statement", project: "DAFZA Industrial", approver: "DM Authority", submitted: "22 Mar 2026", days: "14d", status: "Overdue", tone: "d" },
-    { document: "Shop Drawing Set C", project: "JLT Tower", approver: "WSP Consultant", submitted: "25 Mar 2026", days: "11d", status: "Overdue", tone: "d" },
-    { document: "O&M Manual Draft", project: "DIP Warehouse", approver: "Client (DP World)", submitted: "28 Mar 2026", days: "8d", status: "At risk", tone: "w" },
-    { document: "Structural Calc. Pack", project: "Business Bay", approver: "Aurecon", submitted: "1 Apr 2026", days: "4d", status: "Under review", tone: "" },
-    { document: "HSE Risk Assessment", project: "Mirdif Villa", approver: "Internal HSE", submitted: "2 Apr 2026", days: "3d", status: "Under review", tone: "" },
-  ];
-
+function ApproverBottlenecksCard({
+  bottlenecks,
+}: {
+  bottlenecks: ApprovalBottleneckItem[];
+}) {
   return (
-    <div className="scr on" id="screen-approvals">
+    <div className="cd">
+      <div className="ch">Bottleneck by approver type</div>
 
-      {/* KPI ROW */}
-      <div className="kr">
-        {kpis.map((k) => (
-          <KpiCard key={k.label} item={k} />
-        ))}
-      </div>
+      {bottlenecks.length > 0 ? (
+        bottlenecks.map((item) => (
+          <div key={item.approverTypeCode || item.approverType} className="cbr">
+            <span className="cbl">{item.approverType}</span>
 
-      {/* 2-COLUMN GRID */}
-      <div className="gr c2">
-
-        {/* Bottleneck by approver */}
-        <div className="cd">
-          <div className="ch">Bottleneck by approver type</div>
-
-          {bottlenecks.map((b) => (
-            <div key={b.type} className="cbr">
-              <span className="cbl">{b.type}</span>
-              <div className="cbt">
-                <div
-                  className="cbi"
-                  style={{
-                    width: `${b.width}%`,
-                    background:
-                      b.tone === "d"
-                        ? "var(--rbg)"
-                        : b.tone === "w"
-                        ? "var(--abg)"
-                        : "var(--bbg)",
-                    color:
-                      b.tone === "d"
-                        ? "var(--rt)"
-                        : b.tone === "w"
-                        ? "var(--at)"
-                        : "var(--bt)",
-                  }}
-                >
-                  {b.pending} pending
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Most overdue */}
-        <div className="cd">
-          <div className="ch">Most overdue</div>
-
-          {overdue.map((o) => (
-            <div key={o.title} className="tr2">
+            <div className="cbt">
               <div
-                className="td2"
+                className="cbi"
                 style={{
-                  background: o.tone === "d" ? "var(--rd)" : "var(--am)",
+                  width: `${item.widthPercent}%`,
+                  ...getApproverBarColor(item.approverType),
                 }}
-              />
-              <div>
-                <div style={{ fontWeight: 500 }}>{o.title}</div>
-                <div style={{ color: "var(--t2)", fontSize: 12 }}>
-                  {o.project} — {o.category}
-                </div>
+              >
+                {item.pendingCount} pending
               </div>
             </div>
-          ))}
+          </div>
+        ))
+      ) : (
+        <div style={{ color: "var(--t2)", fontSize: 13 }}>
+          No approver bottlenecks for this portfolio.
         </div>
-      </div>
+      )}
+    </div>
+  );
+}
 
-      {/* TABLE */}
-      <div className="cd">
-        <div className="ch">All pending approvals</div>
+function MostOverdueCard({
+  mostOverdue,
+}: {
+  mostOverdue: {
+    id: string;
+    project: string;
+    document: string;
+    approverType: string;
+    daysOverdue: number;
+  }[];
+}) {
+  return (
+    <div className="cd">
+      <div className="ch">Most overdue</div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Document</th>
-              <th>Project</th>
-              <th>Approver</th>
-              <th>Submitted</th>
-              <th>Days pending</th>
-              <th>Status</th>
-            </tr>
-          </thead>
+      {mostOverdue.length > 0 ? (
+        mostOverdue.map((item) => (
+          <div key={item.id} className="tr2">
+            <div
+              className="td2"
+              style={{
+                background: getOverdueDotColor(item.daysOverdue),
+              }}
+            />
 
-          <tbody>
-            {approvals.map((a) => (
-              <tr key={a.document}>
-                <td>{a.document}</td>
-                <td>{a.project}</td>
-                <td>{a.approver}</td>
-                <td>{a.submitted}</td>
+            <div>
+              <div style={{ fontWeight: 500 }}>
+                {item.project} — {item.document}
+              </div>
 
-                <td style={{ color: a.tone === "d" ? "var(--rd)" : "var(--am)", fontWeight: 500 }}>
-                  {a.days}
+              <div style={{ color: "var(--t2)", fontSize: 12 }}>
+                {item.approverType} — {item.daysOverdue} days overdue
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div style={{ color: "var(--t2)", fontSize: 13 }}>
+          No overdue approvals for this portfolio.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PendingApprovalsTable({
+  pendingApprovals,
+}: {
+  pendingApprovals: ApprovalBottleneckPendingApproval[];
+}) {
+  return (
+    <div className="cd">
+      <div className="ch">All pending approvals</div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Project</th>
+            <th>Approver</th>
+            <th>Submitted</th>
+            <th>Days pending</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {pendingApprovals.length > 0 ? (
+            pendingApprovals.map((approval) => (
+              <tr key={approval.id}>
+                <td>{approval.document}</td>
+                <td>{approval.project}</td>
+                <td>{approval.approver}</td>
+                <td>{approval.submitted}</td>
+                <td
+                  style={getDaysPendingStyle(
+                    approval.status,
+                    approval.statusSeverity,
+                  )}
+                >
+                  {approval.daysPending}d
                 </td>
-
                 <td>
                   <span
-                    className={`b ${
-                      a.status === "Overdue"
-                        ? "br"
-                        : a.status === "At risk"
-                        ? "ba"
-                        : "bb"
-                    }`}
+                    className={getBadgeClassBySeverity(
+                      approval.statusSeverity,
+                      approval.status,
+                    )}
                   >
-                    {a.status}
+                    {approval.status}
                   </span>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
+            ))
+          ) : (
+            <tr>
+              <td colSpan={6} style={{ color: "var(--t2)", fontSize: 13 }}>
+                No pending approvals found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
