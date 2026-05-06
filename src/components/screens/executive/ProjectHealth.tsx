@@ -1,4 +1,7 @@
+"use client";
+
 import {
+  type PortfolioCategoryCode,
   useBlockedItems,
   useDelayedMilestones,
   useHealthTrend,
@@ -6,6 +9,10 @@ import {
 } from "@/lib/api";
 
 type HealthTone = "g" | "w" | "d" | "";
+
+type ProjectHealthProps = {
+  selectedPortfolioCategory?: PortfolioCategoryCode;
+};
 
 function getTone(
   status: string
@@ -39,14 +46,19 @@ function getStatusColor(status: string) {
       return "#888780";
 
     case "CRITICAL":
-      return "var(--rd)";
-      
+      return "var(--rd)";      
 
     default:
       return "var(--gn)";
   }
 }
 
+function KpiCard({ item }: { item: any }) {
+  return (
+    <div className={`kc ${getTone(item.status)}`.trim()}>
+      <div className="kl">{item.label}</div>
+      <div className="kv">{item.value}</div>
+      <div className="ks">{item.percentage}%</div>
 function KpiCard({
   item,
 }: {
@@ -96,6 +108,22 @@ function DelayedMilestonesCard({
         Delayed milestones by project
       </div>
 
+      {delayedMilestones.length ? (
+        delayedMilestones.map((item) => (
+          <div className="cbr" key={item.projectId}>
+            <span className="cbl">{item.projectName}</span>
+
+            <div className="cbt">
+              <div
+                className="cbi"
+                style={{
+                  width: `${item.widthPct}%`,
+                  background: getStatusColor(item.status),
+                  color: "#fff",
+                }}
+              >
+                {item.label}
+              </div>
       {delayedMilestones.map((item) => (
         <div
           className="cbr"
@@ -120,12 +148,17 @@ function DelayedMilestonesCard({
               {item.label}
             </div>
           </div>
+        ))
+      ) : (
+        <div style={{ color: "var(--t2)", fontSize: 13 }}>
+          No delayed milestones for this portfolio.
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
+function BlockedItemsCard({ blockedItems }: { blockedItems: any[] }) {
 function BlockedItemsCard({
   blockedItems,
 }: {
@@ -137,6 +170,9 @@ function BlockedItemsCard({
         Blocked items by project
       </div>
 
+      {blockedItems.length ? (
+        blockedItems.map((item) => (
+          <div className="tr2" key={item.projectId}>
       {blockedItems.map((item) => (
         <div
           className="tr2"
@@ -158,16 +194,33 @@ function BlockedItemsCard({
             </div>
 
             <div
+              className="td2"
               style={{
-                color: "var(--t2)",
-                fontSize: 12,
+                background: item.blockedItems > 0 ? "var(--rd)" : "var(--gn)",
               }}
+            />
+
+            <div>
+              <div style={{ fontWeight: 500 }}>{item.projectName}</div>
+
+              <div
+                style={{
+                  color: "var(--t2)",
+                  fontSize: 12,
+                }}
+              >
+                {item.label}
+              </div>
             >
               {item.label}
             </div>
           </div>
+        ))
+      ) : (
+        <div style={{ color: "var(--t2)", fontSize: 13 }}>
+          No blocked items for this portfolio.
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -195,6 +248,7 @@ function TrendStatusRow({
   );
 }
 
+function HealthTrendCard({ healthTrend }: { healthTrend: any[] }) {
 function HealthTrendCard({
   healthTrend,
 }: {
@@ -246,6 +300,59 @@ function HealthTrendCard({
   );
 }
 
+export default function ProjectHealth({
+  selectedPortfolioCategory = "all",
+}: ProjectHealthProps) {
+  const category = selectedPortfolioCategory;
+
+  const { data: kpis = [], isLoading: summaryLoading, isError, error } =
+    useProjectHealthSummary(category);
+
+  const { data: delayedMilestones = [], isLoading: milestonesLoading } =
+    useDelayedMilestones(category);
+
+  const { data: blockedItems = [], isLoading: blockedLoading } =
+    useBlockedItems(category);
+
+  const { data: healthTrend = [] } = useHealthTrend();
+
+  if (summaryLoading || milestonesLoading || blockedLoading) {
+    return (
+      <div className="scr on" id="screen-health">
+        <div className="cd">
+          <div className="ch">Project health</div>
+          <div style={{ color: "var(--t2)", fontSize: 13 }}>
+            Loading project health...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    const message =
+      error instanceof Error ? error.message : "Unable to load project health";
+
+    return (
+      <div className="scr on" id="screen-health">
+        <div className="cd">
+          <div className="ch">Project health</div>
+          <div style={{ color: "var(--rd)", fontSize: 13 }}>{message}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="scr on" id="screen-health">
+      <KpiRow kpis={kpis} />
+
+      <div className="gr c2">
+        <DelayedMilestonesCard delayedMilestones={delayedMilestones} />
+        <BlockedItemsCard blockedItems={blockedItems} />
+      </div>
+
+      <HealthTrendCard healthTrend={healthTrend} />
 export default function ProjectHealth() {
   const {
     data: kpis = [],
