@@ -60,15 +60,12 @@ export default function RegisterPage() {
   return (
     <main className="authPage">
       <section className="authCard">
-        <div className="authBrand">
-          <div className="authLogo">ST</div>
-
+         <div className="authBrand">
           <div>
-            <h1>Scientechnic Unified Platform</h1>
-            <p>Mobility / ITS dashboard</p>
+            <div className="authlogo"><img src="../logo.png" alt="logo" width={150} height={60}/></div>
+            <p>Unified Platform Dashboard</p>
           </div>
         </div>
-
         <form onSubmit={handleSubmit} className="authForm">
           <h2>Register</h2>
 

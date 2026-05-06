@@ -16,8 +16,8 @@ export default function LoginPage() {
   const { login, isAuthenticated, loading } = useAuth();
 
   const [form, setForm] = useState<LoginForm>({
-    email: "admin@scientechnic.local",
-    password: "Admin@123",
+    email: "",
+    password: "",
   });
 
   const [error, setError] = useState<string>("");
@@ -62,11 +62,9 @@ export default function LoginPage() {
     <main className="authPage">
       <section className="authCard">
         <div className="authBrand">
-          <div className="authLogo">ST</div>
-
           <div>
-            <h1>Scientechnic Unified Platform</h1>
-            <p>Mobility / ITS dashboard</p>
+            <div className="authlogo"><img src="../logo.png" alt="logo" width={150} height={60}/></div>
+            <p>Unified Platform Dashboard</p>
           </div>
         </div>
 
@@ -74,7 +72,7 @@ export default function LoginPage() {
           <h2>Login</h2>
 
           <p className="authHint">
-            Use seeded admin user or register a new user.
+            Use a valid user or register a new user.
           </p>
 
           {error ? <div className="authError">{error}</div> : null}

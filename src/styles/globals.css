@@ -148,33 +148,30 @@ textarea {
 
 .authBrand {
   padding: 44px;
-  background: linear-gradient(135deg, #0f172a, #029699);
+  background: linear-gradient(135deg, #22304f, #029699);
   color: #ffffff;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: 16px;
 }
 
-.authBrand h1 {
-  margin: 0;
-  font-size: 28px;
-  line-height: 1.12;
+.authBrand .authlogo{
+  background: none;
+  display: flex;
+  justify-content: center;
+  scale: 1.2;
+  gap: 30px;
 }
+
 
 .authBrand p {
   margin: 10px 0 0;
   color: rgba(255, 255, 255, 0.75);
+  display: flex;
+  justify-content: center;
 }
 
-.authLogo {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #029699, #0ab3b6);
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-}
 
 .authForm {
   padding: 38px;
