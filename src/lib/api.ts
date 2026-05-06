@@ -7,7 +7,9 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { getAuthHeaders } from "@/lib/auth";
+import { getAuthToken } from "./auth"; 
+
+
 
 /* ================================== */
 /* CONFIG */
@@ -284,6 +286,81 @@ export interface ProjectDrillDownResponse {
   project: ProjectDrillDownSummary | null;
 }
 
+/* ================================== */
+/* REVENUE&BILLING TYPES */
+/* ================================== */
+export interface RevenueBillingSummary {
+  contractValue: number;
+  invoicedToDate: number;
+  billingReadyNow: number;
+  overdueReceivables: number;
+
+  totalProjects: number;
+  billingReadyProjects: number;
+
+  invoicedPct: number;
+}
+
+export interface RevenueBillingProject {
+  projectId: string;
+  projectCode: string;
+
+  projectName: string;
+  clientName: string;
+
+  contractValue: number;
+  invoicedToDate: number;
+
+  progressPct: number;
+
+  billingReadyAmount: number;
+
+  status: 'READY' | 'PARTIAL' | 'NOT_READY';
+
+    tone: 'g' | 'w' | 'd';
+}
+
+
+/* ================================== */
+/* PROJECT HEALTH TYPES */
+/* ================================== */
+
+export interface ProjectHealthSummaryItem {
+  status: ProjectHealthStatus;
+  label: string;
+  value: number;
+  percentage: number;
+}
+
+export interface DelayedMilestoneItem {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  clientName: string;
+  pendingMilestones: number;
+  status: ProjectHealthStatus;
+  label: string;
+  widthPct: number;
+}
+
+export interface BlockedItem {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  clientName: string;
+  blockedItems: number;
+  label: string;
+  widthPct: number;
+}
+
+export interface HealthTrendItem {
+  week: string;
+  onTrack: number;
+  atRisk: number;
+  delayed: number;
+  critical: number;
+}
+
 
 /* ================================== */
 /* ERROR CLASS */
@@ -308,13 +385,15 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const token = getAuthToken();
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...getAuthHeaders(),
-      ...(options.headers || {}),
-    },
+   headers: {
+  "Content-Type": "application/json",
+  ...(options.headers || {}),
+  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  },
   });
 
   const text = await response.text();
@@ -353,28 +432,6 @@ function normalizeList<T>(res: unknown): T[] {
   return [];
 }
 
-/* ================================== */
-/* PORTFOLIO CATEGORY API */
-/* ================================== */
-
-export const portfolioApi = {
-  getAll: (filters: PortfolioCategoryFilters = {}) => {
-    const query = new URLSearchParams({
-      page: String(filters.page ?? 1),
-      limit: String(filters.limit ?? 100),
-      ...(filters.search ? { search: filters.search } : {}),
-    });
-
-    return request<PaginatedResponse<PortfolioCategory>>(
-      `/executive/portfolio-categories?${query.toString()}`
-    );
-  },
-
-  getOne: (id: string | number) =>
-    request<PortfolioCategory>(`/executive/portfolio-categories/${id}`),
-
-
-};
 
 /* ================================== */
 /* PORTFOLIO OVERVIEW API */
@@ -392,6 +449,45 @@ export const portfolioOverviewApi = {
   },
 };
 
+/* ================================== */
+/* PROJECT HEALTH API */
+/* ================================== */
+
+/* ================================== */
+/* PROJECT HEALTH API HOOKS */
+/* ================================== */
+
+export const projectHealthApi = {
+  getSummary: (category: PortfolioCategoryCode = "all") => {
+    const query = new URLSearchParams({ category });
+
+    return request(
+      `/executive/project-health/summary?${query.toString()}`
+    );
+  },
+
+  getBlockedItems: (category: PortfolioCategoryCode = "all") => {
+    const query = new URLSearchParams({ category });
+
+    return request(
+      `/executive/project-health/blocked-items?${query.toString()}`
+    );
+  },
+
+  getDelayedMilestones: (category: PortfolioCategoryCode = "all") => {
+    const query = new URLSearchParams({ category });
+
+    return request(
+      `/executive/project-health/delayed-milestones?${query.toString()}`
+    );
+  },
+
+  getHealthTrend: () => {
+    return request(
+      `/executive/project-health/health-trend`
+    );
+  },
+};
 /* ================================== */
 /* DOCUMENTATION STATUS API */
 /* ================================== */
@@ -433,6 +529,22 @@ export const projectDrillDownApi = {
   },
 };
 
+/* ================================== */
+/* REVENUE & BILLING API */
+/* ================================== */
+
+export const revenueBillingApi = {
+  getSummary: () =>
+    request<RevenueBillingSummary>(
+      `/executive/revenue-billing/summary`
+    ),
+
+  getProjects: () =>
+    request<RevenueBillingProject[]>(
+      `/executive/revenue-billing/by-project`
+    ),
+};
+
 
 /* ================================== */
 /* REACT QUERY KEYS */
@@ -469,7 +581,25 @@ export const projectDrillDownKeys = {
     category: PortfolioCategoryCode,
     projectId?: string | null
   ) => [...projectDrillDownKeys.all, category, projectId ?? "default"] as const,
+
+
+
+ 
 };
+
+
+
+ export const revenueBillingKeys = {
+  all: ['revenue-billing'] as const,
+
+  summary: () =>
+    [...revenueBillingKeys.all, 'summary'] as const,
+
+  projects: () =>
+    [...revenueBillingKeys.all, 'projects'] as const,
+};
+
+
 
 /* ================================== */
 /* REACT QUERY HOOKS - OVERVIEW */
@@ -517,3 +647,57 @@ export function useProjectDrillDown(
     retry: 1,
   });
 }
+
+/* ================================== */
+/* REACT QUERY HOOKS - REVENUE & BILLING */
+/* ================================== */
+
+export function useRevenueBillingSummary() {
+  return useQuery({
+    queryKey: revenueBillingKeys.summary(),
+    queryFn: () => revenueBillingApi.getSummary(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useRevenueBillingProjects() {
+  return useQuery({
+    queryKey: revenueBillingKeys.projects(),
+    queryFn: () => revenueBillingApi.getProjects(),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export const useProjectHealthSummary = (category: PortfolioCategoryCode = "all") => {
+  return useQuery({
+    queryKey: ["project-health-summary", category],
+    queryFn: () => projectHealthApi.getSummary(category),
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useBlockedItems = (category: PortfolioCategoryCode = "all") => {
+  return useQuery({
+    queryKey: ["blocked-items", category],
+    queryFn: () => projectHealthApi.getBlockedItems(category),
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useDelayedMilestones = (category: PortfolioCategoryCode = "all") => {
+  return useQuery({
+    queryKey: ["delayed-milestones", category],
+    queryFn: () => projectHealthApi.getDelayedMilestones(category),
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useHealthTrend = () => {
+  return useQuery({
+    queryKey: ["health-trend"],
+    queryFn: () => projectHealthApi.getHealthTrend(),
+    staleTime: 60 * 1000,
+  });
+};

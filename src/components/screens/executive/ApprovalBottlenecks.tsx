@@ -1,5 +1,196 @@
-const html = "<div class=\"scr on\" id=\"screen-approvals\">\n<div class=\"kr\">\n<div class=\"kc d\"><div class=\"kl\">Total pending</div><div class=\"kv\">37</div><div class=\"ks\">All projects</div></div>\n<div class=\"kc d\"><div class=\"kl\">Overdue (&gt;7d)</div><div class=\"kv\">12</div></div>\n<div class=\"kc w\"><div class=\"kl\">Avg. approval time</div><div class=\"kv\">6.4d</div><div class=\"ks\">SLA: 3 days</div></div>\n<div class=\"kc\"><div class=\"kl\">Approved this month</div><div class=\"kv\">58</div><div class=\"ks\">+12%</div></div>\n</div>\n<div class=\"gr c2\">\n<div class=\"cd\">\n<div class=\"ch\">Bottleneck by approver type</div>\n<div class=\"cbr\"><span class=\"cbl\">Client</span><div class=\"cbt\"><div class=\"cbi\" style=\"width:60%;background:var(--rbg);color:var(--rt)\">14 pending</div></div></div>\n<div class=\"cbr\"><span class=\"cbl\">Consultant</span><div class=\"cbt\"><div class=\"cbi\" style=\"width:45%;background:var(--abg);color:var(--at)\">11 pending</div></div></div>\n<div class=\"cbr\"><span class=\"cbl\">Authority</span><div class=\"cbt\"><div class=\"cbi\" style=\"width:25%;background:var(--abg);color:var(--at)\">6 pending</div></div></div>\n<div class=\"cbr\"><span class=\"cbl\">Internal</span><div class=\"cbt\"><div class=\"cbi\" style=\"width:25%;background:var(--bbg);color:var(--bt)\">6 pending</div></div></div>\n</div>\n<div class=\"cd\">\n<div class=\"ch\">Most overdue</div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--rd)\"></div><div><div style=\"font-weight:500\">Al Barsha MEP \u2014 IFC Drawing Rev.3</div><div style=\"color:var(--t2);font-size:12px\">Client \u2014 18 days overdue</div></div></div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--rd)\"></div><div><div style=\"font-weight:500\">DAFZA \u2014 Civil Method Statement</div><div style=\"color:var(--t2);font-size:12px\">Authority \u2014 14 days overdue</div></div></div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--rd)\"></div><div><div style=\"font-weight:500\">JLT Tower \u2014 Shop Drawing Set C</div><div style=\"color:var(--t2);font-size:12px\">Consultant \u2014 11 days overdue</div></div></div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--am)\"></div><div><div style=\"font-weight:500\">DIP Warehouse \u2014 O&amp;M Manual Draft</div><div style=\"color:var(--t2);font-size:12px\">Client \u2014 8 days overdue</div></div></div>\n</div>\n</div>\n<div class=\"cd\">\n<div class=\"ch\">All pending approvals</div>\n<table><thead><tr><th>Document</th><th>Project</th><th>Approver</th><th>Submitted</th><th>Days pending</th><th>Status</th></tr></thead>\n<tbody>\n<tr><td>IFC Drawing Rev.3</td><td>Al Barsha MEP</td><td>Client (EMAAR)</td><td>17 Mar 2026</td><td style=\"color:var(--rd);font-weight:500\">18d</td><td><span class=\"b br\">Overdue</span></td></tr>\n<tr><td>Civil Method Statement</td><td>DAFZA Industrial</td><td>DM Authority</td><td>22 Mar 2026</td><td style=\"color:var(--rd);font-weight:500\">14d</td><td><span class=\"b br\">Overdue</span></td></tr>\n<tr><td>Shop Drawing Set C</td><td>JLT Tower</td><td>WSP Consultant</td><td>25 Mar 2026</td><td style=\"color:var(--rd);font-weight:500\">11d</td><td><span class=\"b br\">Overdue</span></td></tr>\n<tr><td>O&amp;M Manual Draft</td><td>DIP Warehouse</td><td>Client (DP World)</td><td>28 Mar 2026</td><td style=\"color:var(--am);font-weight:500\">8d</td><td><span class=\"b ba\">At risk</span></td></tr>\n<tr><td>Structural Calc. Pack</td><td>Business Bay</td><td>Aurecon</td><td>1 Apr 2026</td><td>4d</td><td><span class=\"b bb\">Under review</span></td></tr>\n<tr><td>HSE Risk Assessment</td><td>Mirdif Villa</td><td>Internal HSE</td><td>2 Apr 2026</td><td>3d</td><td><span class=\"b bb\">Under review</span></td></tr>\n</tbody></table>\n</div>\n</div>";
+type Tone = "g" | "w" | "d" | "";
 
+interface KpiItem {
+  label: string;
+  value: string;
+  subtext?: string;
+  tone?: Tone;
+}
+
+interface BottleneckItem {
+  type: string;
+  pending: number;
+  width: number;
+  tone: Tone;
+}
+
+interface OverdueItem {
+  title: string;
+  project: string;
+  category: string;
+  days: string;
+  tone: Tone;
+}
+
+interface ApprovalRow {
+  document: string;
+  project: string;
+  approver: string;
+  submitted: string;
+  days: string;
+  status: "Overdue" | "At risk" | "Under review";
+  tone: Tone;
+}
+
+// ---------------- KPI CARD ----------------
+function KpiCard({ item }: { item: KpiItem }) {
+  return (
+    <div className={`kc ${item.tone ?? ""}`.trim()}>
+      <div className="kl">{item.label}</div>
+      <div className="kv">{item.value}</div>
+      {item.subtext && <div className="ks">{item.subtext}</div>}
+    </div>
+  );
+}
+
+// ---------------- MAIN COMPONENT ----------------
 export default function ApprovalBottlenecks() {
-  return <div className="html-screen" dangerouslySetInnerHTML={{ __html: html }} />;
+  const kpis: KpiItem[] = [
+    { label: "Total pending", value: "37", subtext: "All projects", tone: "d" },
+    { label: "Overdue (>7d)", value: "12", tone: "d" },
+    { label: "Avg. approval time", value: "6.4d", subtext: "SLA: 3 days", tone: "w" },
+    { label: "Approved this month", value: "58", subtext: "+12%", tone: "g" },
+  ];
+
+  const bottlenecks: BottleneckItem[] = [
+    { type: "Client", pending: 14, width: 60, tone: "d" },
+    { type: "Consultant", pending: 11, width: 45, tone: "w" },
+    { type: "Authority", pending: 6, width: 25, tone: "w" },
+    { type: "Internal", pending: 6, width: 25, tone: "g" },
+  ];
+
+  const overdue: OverdueItem[] = [
+    { title: "Al Barsha MEP — IFC Drawing Rev.3", project: "Client", category: "18 days overdue", days: "18d", tone: "d" },
+    { title: "DAFZA — Civil Method Statement", project: "Authority", category: "14 days overdue", days: "14d", tone: "d" },
+    { title: "JLT Tower — Shop Drawing Set C", project: "Consultant", category: "11 days overdue", days: "11d", tone: "d" },
+    { title: "DIP Warehouse — O&M Manual Draft", project: "Client", category: "8 days overdue", days: "8d", tone: "w" },
+  ];
+
+  const approvals: ApprovalRow[] = [
+    { document: "IFC Drawing Rev.3", project: "Al Barsha MEP", approver: "Client (EMAAR)", submitted: "17 Mar 2026", days: "18d", status: "Overdue", tone: "d" },
+    { document: "Civil Method Statement", project: "DAFZA Industrial", approver: "DM Authority", submitted: "22 Mar 2026", days: "14d", status: "Overdue", tone: "d" },
+    { document: "Shop Drawing Set C", project: "JLT Tower", approver: "WSP Consultant", submitted: "25 Mar 2026", days: "11d", status: "Overdue", tone: "d" },
+    { document: "O&M Manual Draft", project: "DIP Warehouse", approver: "Client (DP World)", submitted: "28 Mar 2026", days: "8d", status: "At risk", tone: "w" },
+    { document: "Structural Calc. Pack", project: "Business Bay", approver: "Aurecon", submitted: "1 Apr 2026", days: "4d", status: "Under review", tone: "" },
+    { document: "HSE Risk Assessment", project: "Mirdif Villa", approver: "Internal HSE", submitted: "2 Apr 2026", days: "3d", status: "Under review", tone: "" },
+  ];
+
+  return (
+    <div className="scr on" id="screen-approvals">
+
+      {/* KPI ROW */}
+      <div className="kr">
+        {kpis.map((k) => (
+          <KpiCard key={k.label} item={k} />
+        ))}
+      </div>
+
+      {/* 2-COLUMN GRID */}
+      <div className="gr c2">
+
+        {/* Bottleneck by approver */}
+        <div className="cd">
+          <div className="ch">Bottleneck by approver type</div>
+
+          {bottlenecks.map((b) => (
+            <div key={b.type} className="cbr">
+              <span className="cbl">{b.type}</span>
+              <div className="cbt">
+                <div
+                  className="cbi"
+                  style={{
+                    width: `${b.width}%`,
+                    background:
+                      b.tone === "d"
+                        ? "var(--rbg)"
+                        : b.tone === "w"
+                        ? "var(--abg)"
+                        : "var(--bbg)",
+                    color:
+                      b.tone === "d"
+                        ? "var(--rt)"
+                        : b.tone === "w"
+                        ? "var(--at)"
+                        : "var(--bt)",
+                  }}
+                >
+                  {b.pending} pending
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Most overdue */}
+        <div className="cd">
+          <div className="ch">Most overdue</div>
+
+          {overdue.map((o) => (
+            <div key={o.title} className="tr2">
+              <div
+                className="td2"
+                style={{
+                  background: o.tone === "d" ? "var(--rd)" : "var(--am)",
+                }}
+              />
+              <div>
+                <div style={{ fontWeight: 500 }}>{o.title}</div>
+                <div style={{ color: "var(--t2)", fontSize: 12 }}>
+                  {o.project} — {o.category}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* TABLE */}
+      <div className="cd">
+        <div className="ch">All pending approvals</div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Project</th>
+              <th>Approver</th>
+              <th>Submitted</th>
+              <th>Days pending</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {approvals.map((a) => (
+              <tr key={a.document}>
+                <td>{a.document}</td>
+                <td>{a.project}</td>
+                <td>{a.approver}</td>
+                <td>{a.submitted}</td>
+
+                <td style={{ color: a.tone === "d" ? "var(--rd)" : "var(--am)", fontWeight: 500 }}>
+                  {a.days}
+                </td>
+
+                <td>
+                  <span
+                    className={`b ${
+                      a.status === "Overdue"
+                        ? "br"
+                        : a.status === "At risk"
+                        ? "ba"
+                        : "bb"
+                    }`}
+                  >
+                    {a.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  );
 }
