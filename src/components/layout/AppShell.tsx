@@ -7,17 +7,17 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { pageRegistry } from "@/lib/pageRegistry";
 import type { ScreenKey } from "@/data/screens";
-import type { PortfolioCategory } from "@/data/portfolio";
+import type { PortfolioCategoryCode } from "@/lib/api";
 
 type ScreenProps = {
-  selectedPortfolioCategory?: PortfolioCategory;
+  selectedPortfolioCategory?: PortfolioCategoryCode;
 };
 
 export default function AppShell() {
   const [active, setActive] = useState<ScreenKey>("portfolio");
 
   const [selectedPortfolioCategory, setSelectedPortfolioCategory] =
-    useState<PortfolioCategory>("all");
+    useState<PortfolioCategoryCode>("all");
 
   const ActiveScreen = pageRegistry[active] as ComponentType<ScreenProps>;
 

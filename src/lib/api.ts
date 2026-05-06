@@ -2,61 +2,75 @@
 /* IMPORTS */
 /* ================================== */
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { getAuthHeaders } from "@/lib/auth";
 
 /* ================================== */
 /* CONFIG */
 /* ================================== */
 
-export const API_BASE_URL: string =process.env.NEXT_PUBLIC_API_BASE_URL;
+export const API_BASE_URL: string =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api/v1";
 
 /* ================================== */
-/* TYPES */
+/* DATABASE-DRIVEN STRING TYPES */
 /* ================================== */
 
-/* ================================== */
-/* Portfolio STATUS TYPES */
-/* ================================== */
-
-export type PortfolioCategoryCode =
-  | "all"
-  | "its"
-  | "traffic"
-  | "its-maint"
-  | "traffic-maint";
-
-export type ProjectHealthLabel =
-  | "On track"
-  | "At risk"
-  | "Delayed"
-  | "Critical";
-
-export type ProjectHealthStatus =
-  | "ON_TRACK"
-  | "AT_RISK"
-  | "DELAYED"
-  | "CRITICAL";
+export type PortfolioCategoryCode = string;
+export type ProjectHealthLabel = string;
+export type ProjectHealthStatus = string;
+export type ProjectHealthSeverity = string | null;
 
 export type ApprovalBottleneckApproverType = string;
 export type ApprovalBottleneckStatus = string;
+export type ApprovalBottleneckSeverity = string | null;
 
+export type DocumentationStage = string;
+export type DocumentationStatusLabel = string;
+export type DocumentationStatusCode = string;
+export type DocumentationStatusSeverity = string | null;
+
+export type ProjectActivitySeverity = string;
+export type ProjectMilestoneStatus = string;
+export type ProjectMilestoneSeverity = string | null;
+
+/* ================================== */
+/* LOOKUP TYPES */
+/* ================================== */
+
+export interface LookupOption {
+  id: string;
+  code: string;
+  label: string;
+  severity?: string | null;
+  displayOrder: number;
+  isActive: boolean;
+}
 
 export interface PortfolioCategory {
   id: string | number;
   code: string;
   name: string;
   slug?: string;
-  description?: string;
+  description?: string | null;
   isActive?: boolean;
   displayOrder?: number;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface ExecutiveLookupsResponse {
+  portfolioCategories: PortfolioCategory[];
+  documentationStages: LookupOption[];
+  documentApprovalStatuses: LookupOption[];
+  projectHealthStatuses: LookupOption[];
+  milestoneStatuses: LookupOption[];
+  activitySeverities: LookupOption[];
+}
+
+/* ================================== */
+/* PORTFOLIO CATEGORY TYPES */
+/* ================================== */
 
 export interface PortfolioCategoryFilters {
   page?: number;
@@ -74,6 +88,10 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
 }
+
+/* ================================== */
+/* PORTFOLIO OVERVIEW TYPES */
+/* ================================== */
 
 export interface PortfolioOverviewKpis {
   activeProjects: number;
@@ -103,6 +121,7 @@ export interface PortfolioTopIssue {
   categoryName: string;
   health: ProjectHealthLabel;
   healthStatus: ProjectHealthStatus;
+  healthSeverity?: ProjectHealthSeverity;
   issueTitle: string | null;
   issueAgeDays?: number | null;
 }
@@ -121,6 +140,7 @@ export interface PortfolioOverviewProject {
   actualProgress?: number;
   health: ProjectHealthLabel;
   healthStatus: ProjectHealthStatus;
+  healthSeverity?: ProjectHealthSeverity;
   delayedApprovals: number;
   blocked: number;
   contractValue?: number;
@@ -131,6 +151,7 @@ export interface PortfolioOverviewProject {
 
 export interface PortfolioOverviewResponse {
   selectedCategory: PortfolioCategoryCode;
+  selectedCategoryLabel?: string;
   kpis: PortfolioOverviewKpis;
   healthStatus: PortfolioOverviewHealthStatus;
   topIssues: PortfolioTopIssue[];
@@ -141,7 +162,6 @@ export interface PortfolioOverviewResponse {
 /* APPROVAL BOTTLENECKS TYPES */
 /* ================================== */
 
-
 export interface ApprovalBottleneckKpis {
   totalPending: number;
   overdueCount: number;
@@ -151,7 +171,7 @@ export interface ApprovalBottleneckKpis {
 }
 
 export interface ApprovalBottleneckItem {
-  approverType: string;
+  approverType: ApprovalBottleneckApproverType;
   approverTypeCode: string;
   pendingCount: number;
   widthPercent: number;
@@ -161,7 +181,7 @@ export interface ApprovalBottleneckOverdueItem {
   id: string;
   project: string;
   document: string;
-  approverType: string;
+  approverType: ApprovalBottleneckApproverType;
   approverTypeCode: string;
   daysOverdue: number;
 }
@@ -172,18 +192,18 @@ export interface ApprovalBottleneckPendingApproval {
   project: string;
   projectCode: string;
   approver: string;
-  approverType: string;
+  approverType: ApprovalBottleneckApproverType;
   approverTypeCode: string;
   submitted: string;
   submittedAt: string;
   daysPending: number;
-  status: string;
+  status: ApprovalBottleneckStatus;
   statusCode: string;
-  statusSeverity: string | null;
+  statusSeverity: ApprovalBottleneckSeverity;
 }
 
 export interface ApprovalBottlenecksResponse {
-  selectedCategory: string;
+  selectedCategory: PortfolioCategoryCode;
   selectedCategoryLabel: string;
   kpis: ApprovalBottleneckKpis;
   bottlenecks: ApprovalBottleneckItem[];
@@ -195,36 +215,25 @@ export interface ApprovalBottlenecksResponse {
 /* DOCUMENTATION STATUS TYPES */
 /* ================================== */
 
-export type DocumentationStage =
-  | "pre-construction"
-  | "design"
-  | "procurement"
-  | "construction"
-  | "testing-commissioning"
-  | "closeout";
-
-export type DocumentationStatusLabel =
-  | "Approved"
-  | "Under review"
-  | "In preparation"
-  | "Overdue"
-  | "Rejected"
-  | "At risk";
-
 export interface DocumentationStatusKpis {
   totalDocuments: number;
-  approved: number;
-  underReview: number;
-  overdue: number;
-  inPreparation: number;
-  rejected: number;
-  atRisk: number;
+
+  approved?: number;
+  underReview?: number;
+  overdue?: number;
+  inPreparation?: number;
+  rejected?: number;
+  atRisk?: number;
+
+  [key: string]: number | undefined;
 }
 
 export interface DocumentationStatusSummaryItem {
+  code?: DocumentationStatusCode;
   label: DocumentationStatusLabel;
   value: number;
   percent: number;
+  severity?: DocumentationStatusSeverity;
 }
 
 export interface DocumentationOverdueApproval {
@@ -234,8 +243,9 @@ export interface DocumentationOverdueApproval {
   title: string;
   approver: string;
   status: DocumentationStatusLabel;
+  statusCode?: DocumentationStatusCode;
   days: number;
-  severity: "danger" | "warning";
+  severity: DocumentationStatusSeverity;
 }
 
 export interface DocumentationRegisterItem {
@@ -248,6 +258,8 @@ export interface DocumentationRegisterItem {
   submitted: string;
   approver: string;
   status: DocumentationStatusLabel;
+  statusCode?: DocumentationStatusCode;
+  statusSeverity?: DocumentationStatusSeverity;
   count: number;
   overdueDays: number | null;
 }
@@ -267,14 +279,6 @@ export interface DocumentationStatusResponse {
 /* PROJECT DRILL DOWN TYPES */
 /* ================================== */
 
-export type ProjectActivitySeverity = "success" | "warning" | "danger";
-
-export type ProjectMilestoneStatus =
-  | "Complete"
-  | "Delayed"
-  | "At risk"
-  | "Upcoming";
-
 export interface ProjectDrillDownProjectOption {
   id: string;
   code: string;
@@ -283,6 +287,7 @@ export interface ProjectDrillDownProjectOption {
   projectManager?: string | null;
   health: ProjectHealthLabel;
   healthStatus: ProjectHealthStatus;
+  healthSeverity?: ProjectHealthSeverity;
 }
 
 export interface ProjectDrillDownKpis {
@@ -300,6 +305,7 @@ export interface ProjectDrillDownPackage {
   id: string;
   name: string;
   status: ProjectHealthStatus;
+  statusSeverity?: ProjectHealthSeverity;
   completion: number;
 }
 
@@ -317,6 +323,8 @@ export interface ProjectDrillDownMilestone {
   forecastDate: string | null;
   varianceDays: number | null;
   status: ProjectMilestoneStatus;
+  statusCode?: string;
+  statusSeverity?: ProjectMilestoneSeverity;
 }
 
 export interface ProjectDrillDownSummary {
@@ -329,6 +337,7 @@ export interface ProjectDrillDownSummary {
   endDate?: string | null;
   health: ProjectHealthLabel;
   healthStatus: ProjectHealthStatus;
+  healthSeverity?: ProjectHealthSeverity;
   kpis: ProjectDrillDownKpis;
   packages: ProjectDrillDownPackage[];
   activities: ProjectDrillDownActivity[];
@@ -341,7 +350,6 @@ export interface ProjectDrillDownResponse {
   projects: ProjectDrillDownProjectOption[];
   project: ProjectDrillDownSummary | null;
 }
-
 
 /* ================================== */
 /* ERROR CLASS */
@@ -364,7 +372,7 @@ export class ApiError extends Error {
 
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
@@ -386,13 +394,16 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    const err = data as any;
+    const err = data as {
+      message?: string | string[];
+      error?: string;
+    };
 
-    throw new ApiError(
-      err?.message || err?.error || "API request failed",
-      response.status,
-      data
-    );
+    const message = Array.isArray(err?.message)
+      ? err.message.join(", ")
+      : err?.message || err?.error || "API request failed";
+
+    throw new ApiError(message, response.status, data);
   }
 
   return data as T;
@@ -402,14 +413,30 @@ async function request<T>(
 /* RESPONSE NORMALIZER */
 /* ================================== */
 
-function normalizeList<T>(res: unknown): T[] {
+export function normalizeList<T>(res: unknown): T[] {
   if (Array.isArray(res)) return res;
-  if (Array.isArray((res as any)?.data)) return (res as any).data;
-  if (Array.isArray((res as any)?.items)) return (res as any).items;
-  if (Array.isArray((res as any)?.result)) return (res as any).result;
+  if (Array.isArray((res as { data?: unknown })?.data)) {
+    return (res as { data: T[] }).data;
+  }
+  if (Array.isArray((res as { items?: unknown })?.items)) {
+    return (res as { items: T[] }).items;
+  }
+  if (Array.isArray((res as { result?: unknown })?.result)) {
+    return (res as { result: T[] }).result;
+  }
 
   return [];
 }
+
+/* ================================== */
+/* EXECUTIVE LOOKUPS API */
+/* ================================== */
+
+export const executiveLookupsApi = {
+  getLookups: () => {
+    return request<ExecutiveLookupsResponse>("/executive/lookups");
+  },
+};
 
 /* ================================== */
 /* PORTFOLIO CATEGORY API */
@@ -424,14 +451,12 @@ export const portfolioApi = {
     });
 
     return request<PaginatedResponse<PortfolioCategory>>(
-      `/executive/portfolio-categories?${query.toString()}`
+      `/executive/portfolio-categories?${query.toString()}`,
     );
   },
 
   getOne: (id: string | number) =>
     request<PortfolioCategory>(`/executive/portfolio-categories/${id}`),
-
-
 };
 
 /* ================================== */
@@ -445,7 +470,7 @@ export const portfolioOverviewApi = {
     });
 
     return request<PortfolioOverviewResponse>(
-      `/executive/portfolio-overview?${query.toString()}`
+      `/executive/portfolio-overview?${query.toString()}`,
     );
   },
 };
@@ -457,7 +482,7 @@ export const portfolioOverviewApi = {
 export const documentationStatusApi = {
   getStatus: (
     category: PortfolioCategoryCode = "all",
-    stage: DocumentationStage = "pre-construction"
+    stage: DocumentationStage = "pre-construction",
   ) => {
     const query = new URLSearchParams({
       category,
@@ -465,11 +490,10 @@ export const documentationStatusApi = {
     });
 
     return request<DocumentationStatusResponse>(
-      `/executive/documentation-status?${query.toString()}`
+      `/executive/documentation-status?${query.toString()}`,
     );
   },
 };
-
 
 /* ================================== */
 /* PROJECT DRILL DOWN API */
@@ -478,7 +502,7 @@ export const documentationStatusApi = {
 export const projectDrillDownApi = {
   getSummary: (
     category: PortfolioCategoryCode = "all",
-    projectId?: string | null
+    projectId?: string | null,
   ) => {
     const query = new URLSearchParams({
       category,
@@ -486,7 +510,7 @@ export const projectDrillDownApi = {
     });
 
     return request<ProjectDrillDownResponse>(
-      `/executive/project-drilldown?${query.toString()}`
+      `/executive/project-drilldown?${query.toString()}`,
     );
   },
 };
@@ -494,23 +518,26 @@ export const projectDrillDownApi = {
 /* ================================== */
 /* APPROVAL BOTTLENECKS API */
 /* ================================== */
+
 export const approvalBottlenecksApi = {
   getOverview: (category: PortfolioCategoryCode = "all") => {
-    const params = new URLSearchParams();
-
-    params.set("category", category);
+    const query = new URLSearchParams({
+      category,
+    });
 
     return request<ApprovalBottlenecksResponse>(
-      `/executive/approval-bottlenecks?${params.toString()}`,
+      `/executive/approval-bottlenecks?${query.toString()}`,
     );
   },
 };
 
-
-
 /* ================================== */
 /* REACT QUERY KEYS */
 /* ================================== */
+
+export const executiveLookupKeys = {
+  all: ["executive-lookups"] as const,
+};
 
 export const portfolioKeys = {
   all: ["portfolio"] as const,
@@ -530,27 +557,43 @@ export const portfolioKeys = {
 export const documentationStatusKeys = {
   all: ["documentation-status"] as const,
 
-  detail: (
-    category: PortfolioCategoryCode,
-    stage: DocumentationStage
-  ) => [...documentationStatusKeys.all, category, stage] as const,
+  detail: (category: PortfolioCategoryCode, stage: DocumentationStage) =>
+    [...documentationStatusKeys.all, category, stage] as const,
 };
 
 export const projectDrillDownKeys = {
   all: ["project-drill-down"] as const,
 
-  detail: (
-    category: PortfolioCategoryCode,
-    projectId?: string | null
-  ) => [...projectDrillDownKeys.all, category, projectId ?? "default"] as const,
+  detail: (category: PortfolioCategoryCode, projectId?: string | null) =>
+    [...projectDrillDownKeys.all, category, projectId ?? "default"] as const,
+};
+
+export const approvalBottlenecksKeys = {
+  all: ["approval-bottlenecks"] as const,
+
+  detail: (category: PortfolioCategoryCode) =>
+    [...approvalBottlenecksKeys.all, category] as const,
 };
 
 /* ================================== */
-/* REACT QUERY HOOKS - OVERVIEW */
+/* REACT QUERY HOOKS - EXECUTIVE LOOKUPS */
+/* ================================== */
+
+export function useExecutiveLookups() {
+  return useQuery({
+    queryKey: executiveLookupKeys.all,
+    queryFn: () => executiveLookupsApi.getLookups(),
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+}
+
+/* ================================== */
+/* REACT QUERY HOOKS - PORTFOLIO OVERVIEW */
 /* ================================== */
 
 export function usePortfolioOverview(
-  category: PortfolioCategoryCode = "all"
+  category: PortfolioCategoryCode = "all",
 ) {
   return useQuery({
     queryKey: portfolioKeys.overview(category),
@@ -566,7 +609,7 @@ export function usePortfolioOverview(
 
 export function useDocumentationStatus(
   category: PortfolioCategoryCode = "all",
-  stage: DocumentationStage = "pre-construction"
+  stage: DocumentationStage = "pre-construction",
 ) {
   return useQuery({
     queryKey: documentationStatusKeys.detail(category, stage),
@@ -582,7 +625,7 @@ export function useDocumentationStatus(
 
 export function useProjectDrillDown(
   category: PortfolioCategoryCode = "all",
-  projectId?: string | null
+  projectId?: string | null,
 ) {
   return useQuery({
     queryKey: projectDrillDownKeys.detail(category, projectId),
@@ -598,9 +641,9 @@ export function useProjectDrillDown(
 
 export function useApprovalBottlenecks(
   category: PortfolioCategoryCode = "all",
-) {
+) { 
   return useQuery({
-    queryKey: ["approval-bottlenecks", category],
+    queryKey: approvalBottlenecksKeys.detail(category),
     queryFn: () => approvalBottlenecksApi.getOverview(category),
     staleTime: 60 * 1000,
     retry: 1,
