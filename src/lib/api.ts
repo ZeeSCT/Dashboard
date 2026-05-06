@@ -42,6 +42,10 @@ export type ProjectHealthStatus =
   | "DELAYED"
   | "CRITICAL";
 
+export type ApprovalBottleneckApproverType = string;
+export type ApprovalBottleneckStatus = string;
+
+
 export interface PortfolioCategory {
   id: string | number;
   code: string;
@@ -131,6 +135,60 @@ export interface PortfolioOverviewResponse {
   healthStatus: PortfolioOverviewHealthStatus;
   topIssues: PortfolioTopIssue[];
   projects: PortfolioOverviewProject[];
+}
+
+/* ================================== */
+/* APPROVAL BOTTLENECKS TYPES */
+/* ================================== */
+
+
+export interface ApprovalBottleneckKpis {
+  totalPending: number;
+  overdueCount: number;
+  averageApprovalTimeDays: number;
+  approvedThisMonth: number;
+  approvedThisMonthChangePct: number;
+}
+
+export interface ApprovalBottleneckItem {
+  approverType: string;
+  approverTypeCode: string;
+  pendingCount: number;
+  widthPercent: number;
+}
+
+export interface ApprovalBottleneckOverdueItem {
+  id: string;
+  project: string;
+  document: string;
+  approverType: string;
+  approverTypeCode: string;
+  daysOverdue: number;
+}
+
+export interface ApprovalBottleneckPendingApproval {
+  id: string;
+  document: string;
+  project: string;
+  projectCode: string;
+  approver: string;
+  approverType: string;
+  approverTypeCode: string;
+  submitted: string;
+  submittedAt: string;
+  daysPending: number;
+  status: string;
+  statusCode: string;
+  statusSeverity: string | null;
+}
+
+export interface ApprovalBottlenecksResponse {
+  selectedCategory: string;
+  selectedCategoryLabel: string;
+  kpis: ApprovalBottleneckKpis;
+  bottlenecks: ApprovalBottleneckItem[];
+  mostOverdue: ApprovalBottleneckOverdueItem[];
+  pendingApprovals: ApprovalBottleneckPendingApproval[];
 }
 
 /* ================================== */
@@ -433,6 +491,22 @@ export const projectDrillDownApi = {
   },
 };
 
+/* ================================== */
+/* APPROVAL BOTTLENECKS API */
+/* ================================== */
+export const approvalBottlenecksApi = {
+  getOverview: (category: PortfolioCategoryCode = "all") => {
+    const params = new URLSearchParams();
+
+    params.set("category", category);
+
+    return request<ApprovalBottlenecksResponse>(
+      `/executive/approval-bottlenecks?${params.toString()}`,
+    );
+  },
+};
+
+
 
 /* ================================== */
 /* REACT QUERY KEYS */
@@ -513,6 +587,21 @@ export function useProjectDrillDown(
   return useQuery({
     queryKey: projectDrillDownKeys.detail(category, projectId),
     queryFn: () => projectDrillDownApi.getSummary(category, projectId),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+/* ================================== */
+/* REACT QUERY HOOKS - APPROVAL BOTTLENECKS */
+/* ================================== */
+
+export function useApprovalBottlenecks(
+  category: PortfolioCategoryCode = "all",
+) {
+  return useQuery({
+    queryKey: ["approval-bottlenecks", category],
+    queryFn: () => approvalBottlenecksApi.getOverview(category),
     staleTime: 60 * 1000,
     retry: 1,
   });

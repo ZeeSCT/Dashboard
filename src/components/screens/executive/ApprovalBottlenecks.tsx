@@ -1,5 +1,308 @@
-const html = "<div class=\"scr on\" id=\"screen-approvals\">\n<div class=\"kr\">\n<div class=\"kc d\"><div class=\"kl\">Total pending</div><div class=\"kv\">37</div><div class=\"ks\">All projects</div></div>\n<div class=\"kc d\"><div class=\"kl\">Overdue (&gt;7d)</div><div class=\"kv\">12</div></div>\n<div class=\"kc w\"><div class=\"kl\">Avg. approval time</div><div class=\"kv\">6.4d</div><div class=\"ks\">SLA: 3 days</div></div>\n<div class=\"kc\"><div class=\"kl\">Approved this month</div><div class=\"kv\">58</div><div class=\"ks\">+12%</div></div>\n</div>\n<div class=\"gr c2\">\n<div class=\"cd\">\n<div class=\"ch\">Bottleneck by approver type</div>\n<div class=\"cbr\"><span class=\"cbl\">Client</span><div class=\"cbt\"><div class=\"cbi\" style=\"width:60%;background:var(--rbg);color:var(--rt)\">14 pending</div></div></div>\n<div class=\"cbr\"><span class=\"cbl\">Consultant</span><div class=\"cbt\"><div class=\"cbi\" style=\"width:45%;background:var(--abg);color:var(--at)\">11 pending</div></div></div>\n<div class=\"cbr\"><span class=\"cbl\">Authority</span><div class=\"cbt\"><div class=\"cbi\" style=\"width:25%;background:var(--abg);color:var(--at)\">6 pending</div></div></div>\n<div class=\"cbr\"><span class=\"cbl\">Internal</span><div class=\"cbt\"><div class=\"cbi\" style=\"width:25%;background:var(--bbg);color:var(--bt)\">6 pending</div></div></div>\n</div>\n<div class=\"cd\">\n<div class=\"ch\">Most overdue</div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--rd)\"></div><div><div style=\"font-weight:500\">Al Barsha MEP \u2014 IFC Drawing Rev.3</div><div style=\"color:var(--t2);font-size:12px\">Client \u2014 18 days overdue</div></div></div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--rd)\"></div><div><div style=\"font-weight:500\">DAFZA \u2014 Civil Method Statement</div><div style=\"color:var(--t2);font-size:12px\">Authority \u2014 14 days overdue</div></div></div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--rd)\"></div><div><div style=\"font-weight:500\">JLT Tower \u2014 Shop Drawing Set C</div><div style=\"color:var(--t2);font-size:12px\">Consultant \u2014 11 days overdue</div></div></div>\n<div class=\"tr2\"><div class=\"td2\" style=\"background:var(--am)\"></div><div><div style=\"font-weight:500\">DIP Warehouse \u2014 O&amp;M Manual Draft</div><div style=\"color:var(--t2);font-size:12px\">Client \u2014 8 days overdue</div></div></div>\n</div>\n</div>\n<div class=\"cd\">\n<div class=\"ch\">All pending approvals</div>\n<table><thead><tr><th>Document</th><th>Project</th><th>Approver</th><th>Submitted</th><th>Days pending</th><th>Status</th></tr></thead>\n<tbody>\n<tr><td>IFC Drawing Rev.3</td><td>Al Barsha MEP</td><td>Client (EMAAR)</td><td>17 Mar 2026</td><td style=\"color:var(--rd);font-weight:500\">18d</td><td><span class=\"b br\">Overdue</span></td></tr>\n<tr><td>Civil Method Statement</td><td>DAFZA Industrial</td><td>DM Authority</td><td>22 Mar 2026</td><td style=\"color:var(--rd);font-weight:500\">14d</td><td><span class=\"b br\">Overdue</span></td></tr>\n<tr><td>Shop Drawing Set C</td><td>JLT Tower</td><td>WSP Consultant</td><td>25 Mar 2026</td><td style=\"color:var(--rd);font-weight:500\">11d</td><td><span class=\"b br\">Overdue</span></td></tr>\n<tr><td>O&amp;M Manual Draft</td><td>DIP Warehouse</td><td>Client (DP World)</td><td>28 Mar 2026</td><td style=\"color:var(--am);font-weight:500\">8d</td><td><span class=\"b ba\">At risk</span></td></tr>\n<tr><td>Structural Calc. Pack</td><td>Business Bay</td><td>Aurecon</td><td>1 Apr 2026</td><td>4d</td><td><span class=\"b bb\">Under review</span></td></tr>\n<tr><td>HSE Risk Assessment</td><td>Mirdif Villa</td><td>Internal HSE</td><td>2 Apr 2026</td><td>3d</td><td><span class=\"b bb\">Under review</span></td></tr>\n</tbody></table>\n</div>\n</div>";
+"use client";
 
-export default function ApprovalBottlenecks() {
-  return <div className="html-screen" dangerouslySetInnerHTML={{ __html: html }} />;
+import { useMemo } from "react";
+import {
+  ApprovalBottleneckApproverType,
+  ApprovalBottleneckItem,
+  ApprovalBottleneckPendingApproval,
+  ApprovalBottleneckStatus,
+  PortfolioCategoryCode,
+  useApprovalBottlenecks,
+} from "@/lib/api";
+
+interface ApprovalBottlenecksProps {
+  selectedPortfolioCategory?: PortfolioCategoryCode;
+}
+
+interface ApprovalBottlenecksKpiCard {
+  label: string;
+  value: string | number;
+  subtext?: string;
+  tone?: "g" | "w" | "d";
+}
+
+function getBadgeClass(status: ApprovalBottleneckStatus) {
+  switch (status) {
+    case "Overdue":
+      return "b br";
+
+    case "At risk":
+      return "b ba";
+
+    case "Under review":
+      return "b bb";
+
+    default:
+      return "b bb";
+  }
+}
+
+function getKpiClass(tone?: ApprovalBottlenecksKpiCard["tone"]) {
+  return tone ? `kc ${tone}` : "kc";
+}
+
+function getApproverBarColor(approverType: ApprovalBottleneckApproverType) {
+  switch (approverType) {
+    case "Client":
+      return {
+        background: "var(--rbg)",
+        color: "var(--rt)",
+      };
+
+    case "Consultant":
+    case "Authority":
+      return {
+        background: "var(--abg)",
+        color: "var(--at)",
+      };
+
+    case "Internal":
+      return {
+        background: "var(--bbg)",
+        color: "var(--bt)",
+      };
+
+    default:
+      return {
+        background: "var(--bbg)",
+        color: "var(--bt)",
+      };
+  }
+}
+
+function getOverdueDotColor(daysOverdue: number) {
+  if (daysOverdue > 10) return "var(--rd)";
+  return "var(--am)";
+}
+
+function getDaysPendingStyle(status: ApprovalBottleneckStatus) {
+  switch (status) {
+    case "Overdue":
+      return {
+        color: "var(--rd)",
+        fontWeight: 500,
+      };
+
+    case "At risk":
+      return {
+        color: "var(--am)",
+        fontWeight: 500,
+      };
+
+    default:
+      return {};
+  }
+}
+
+function formatAverageDays(value: number) {
+  return `${value.toFixed(1)}d`;
+}
+
+export default function ApprovalBottlenecks({
+  selectedPortfolioCategory = "all",
+}: ApprovalBottlenecksProps) {
+  const category = selectedPortfolioCategory;
+
+  const { data, isLoading, isError, error } =
+    useApprovalBottlenecks(category);
+
+  const kpis = useMemo<ApprovalBottlenecksKpiCard[]>(() => {
+    if (!data) return [];
+
+    return [
+      {
+        label: "Total pending",
+        value: data.kpis.totalPending,
+        subtext: category === "all" ? "All projects" : "Selected portfolio",
+        tone: data.kpis.totalPending > 0 ? "d" : "g",
+      },
+      {
+        label: "Overdue (>7d)",
+        value: data.kpis.overdueCount,
+        tone: data.kpis.overdueCount > 0 ? "d" : "g",
+      },
+      {
+        label: "Avg. approval time",
+        value: formatAverageDays(data.kpis.averageApprovalTimeDays),
+        subtext: "SLA: 3 days",
+        tone:
+          data.kpis.averageApprovalTimeDays > 7
+            ? "d"
+            : data.kpis.averageApprovalTimeDays > 3
+              ? "w"
+              : "g",
+      },
+      {
+        label: "Approved this month",
+        value: data.kpis.approvedThisMonth,
+        subtext:
+          data.kpis.approvedThisMonthChangePct >= 0
+            ? `+${data.kpis.approvedThisMonthChangePct}%`
+            : `${data.kpis.approvedThisMonthChangePct}%`,
+      },
+    ];
+  }, [data, category]);
+
+  if (isLoading) {
+    return (
+      <div className="scr on" id="screen-approvals">
+        <div className="cd">
+          <div className="ch">Approval bottlenecks</div>
+          <div style={{ color: "var(--t2)", fontSize: 13 }}>
+            Loading approval bottlenecks...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to load approval bottlenecks";
+
+    return (
+      <div className="scr on" id="screen-approvals">
+        <div className="cd">
+          <div className="ch">Approval bottlenecks</div>
+          <div style={{ color: "var(--rd)", fontSize: 13 }}>{message}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="scr on" id="screen-approvals">
+        <div className="cd">
+          <div className="ch">Approval bottlenecks</div>
+          <div style={{ color: "var(--t2)", fontSize: 13 }}>
+            No approval bottleneck data available.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="scr on" id="screen-approvals">
+      <div className="kr">
+        {kpis.map((kpi) => (
+          <div key={kpi.label} className={getKpiClass(kpi.tone)}>
+            <div className="kl">{kpi.label}</div>
+            <div className="kv">{kpi.value}</div>
+            {kpi.subtext ? <div className="ks">{kpi.subtext}</div> : null}
+          </div>
+        ))}
+      </div>
+
+      <div className="gr c2">
+        <div className="cd">
+          <div className="ch">Bottleneck by approver type</div>
+
+          {data.bottlenecks.map((item: ApprovalBottleneckItem) => (
+            <div key={item.approverType} className="cbr">
+              <span className="cbl">{item.approverType}</span>
+
+              <div className="cbt">
+                <div
+                  className="cbi"
+                  style={{
+                    width: `${item.widthPercent}%`,
+                    ...getApproverBarColor(item.approverType),
+                  }}
+                >
+                  {item.pendingCount} pending
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {data.bottlenecks.length === 0 ? (
+            <div style={{ color: "var(--t2)", fontSize: 13 }}>
+              No approver bottlenecks for this portfolio.
+            </div>
+          ) : null}
+        </div>
+
+        <div className="cd">
+          <div className="ch">Most overdue</div>
+
+          {data.mostOverdue.map((item) => (
+            <div key={item.id} className="tr2">
+              <div
+                className="td2"
+                style={{
+                  background: getOverdueDotColor(item.daysOverdue),
+                }}
+              />
+
+              <div>
+                <div style={{ fontWeight: 500 }}>
+                  {item.project} — {item.document}
+                </div>
+
+                <div style={{ color: "var(--t2)", fontSize: 12 }}>
+                  {item.approverType} — {item.daysOverdue} days overdue
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {data.mostOverdue.length === 0 ? (
+            <div style={{ color: "var(--t2)", fontSize: 13 }}>
+              No overdue approvals for this portfolio.
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="cd">
+        <div className="ch">All pending approvals</div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Project</th>
+              <th>Approver</th>
+              <th>Submitted</th>
+              <th>Days pending</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {data.pendingApprovals.map(
+              (approval: ApprovalBottleneckPendingApproval) => (
+                <tr key={approval.id}>
+                  <td>{approval.document}</td>
+                  <td>{approval.project}</td>
+                  <td>{approval.approver}</td>
+                  <td>{approval.submitted}</td>
+                  <td style={getDaysPendingStyle(approval.status)}>
+                    {approval.daysPending}d
+                  </td>
+                  <td>
+                    <span className={getBadgeClass(approval.status)}>
+                      {approval.status}
+                    </span>
+                  </td>
+                </tr>
+              ),
+            )}
+
+            {data.pendingApprovals.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ color: "var(--t2)", fontSize: 13 }}>
+                  No pending approvals found.
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
