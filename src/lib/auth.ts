@@ -116,12 +116,8 @@ export async function loginUser(payload: LoginPayload): Promise<AuthSession> {
    * Temporary fallback login.
    * This allows local login even before backend DB auth is ready.
    */
-  if (email === DEFAULT_EMAIL && password === DEFAULT_PASSWORD) {
-    const session = createDefaultLocalSession();
-    writeSession(session);
-    return session;
-  }
-
+  
+ 
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: {
@@ -135,7 +131,7 @@ export async function loginUser(payload: LoginPayload): Promise<AuthSession> {
 
   return session;
 }
-
+ 
 export async function registerUser(
   payload: RegisterPayload
 ): Promise<AuthSession> {
@@ -174,7 +170,19 @@ export function logoutUser(): void {
 }
 
 export function getAuthToken(): string | null {
-  return getSession()?.token ?? null;
+  if (typeof window === "undefined") return null;
+
+  try {
+    const session = localStorage.getItem(SESSION_KEY);
+
+    if (!session) return null;
+
+    const parsed = JSON.parse(session);
+
+    return parsed.accessToken || parsed.token || null;
+  } catch {
+    return null;
+  }
 }
 
 export function getAuthHeaders(): HeadersInit {
