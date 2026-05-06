@@ -14,7 +14,9 @@ type ProjectHealthProps = {
   selectedPortfolioCategory?: PortfolioCategoryCode;
 };
 
-function getTone(status: string): HealthTone {
+function getTone(
+  status: string
+): HealthTone {
   switch (status) {
     case "ON_TRACK":
       return "g";
@@ -24,7 +26,6 @@ function getTone(status: string): HealthTone {
 
     case "DELAYED":
       return "";
-
     case "CRITICAL":
       return "d";
 
@@ -45,7 +46,7 @@ function getStatusColor(status: string) {
       return "#888780";
 
     case "CRITICAL":
-      return "var(--rd)";
+      return "var(--rd)";      
 
     default:
       return "var(--gn)";
@@ -58,6 +59,28 @@ function KpiCard({ item }: { item: any }) {
       <div className="kl">{item.label}</div>
       <div className="kv">{item.value}</div>
       <div className="ks">{item.percentage}%</div>
+function KpiCard({
+  item,
+}: {
+  item: any;
+}) {
+  return (
+    <div
+      className={`kc ${getTone(
+        item.status
+      )}`.trim()}
+    >
+      <div className="kl">
+        {item.label}
+      </div>
+
+      <div className="kv">
+        {item.value}
+      </div>
+
+      <div className="ks">
+        {item.percentage}%
+      </div>
     </div>
   );
 }
@@ -81,7 +104,9 @@ function DelayedMilestonesCard({
 }) {
   return (
     <div className="cd">
-      <div className="ch">Delayed milestones by project</div>
+      <div className="ch">
+        Delayed milestones by project
+      </div>
 
       {delayedMilestones.length ? (
         delayedMilestones.map((item) => (
@@ -99,6 +124,28 @@ function DelayedMilestonesCard({
               >
                 {item.label}
               </div>
+      {delayedMilestones.map((item) => (
+        <div
+          className="cbr"
+          key={item.projectId}
+        >
+          <span className="cbl">
+            {item.projectName}
+          </span>
+
+          <div className="cbt">
+            <div
+              className="cbi"
+              style={{
+                width: `${item.widthPct}%`,
+                background:
+                  getStatusColor(
+                    item.status
+                  ),
+                color: "#fff",
+              }}
+            >
+              {item.label}
             </div>
           </div>
         ))
@@ -112,13 +159,40 @@ function DelayedMilestonesCard({
 }
 
 function BlockedItemsCard({ blockedItems }: { blockedItems: any[] }) {
+function BlockedItemsCard({
+  blockedItems,
+}: {
+  blockedItems: any[];
+}) {
   return (
     <div className="cd">
-      <div className="ch">Blocked items by project</div>
+      <div className="ch">
+        Blocked items by project
+      </div>
 
       {blockedItems.length ? (
         blockedItems.map((item) => (
           <div className="tr2" key={item.projectId}>
+      {blockedItems.map((item) => (
+        <div
+          className="tr2"
+          key={item.projectId}
+        >
+          <div
+            className="td2"
+            style={{
+              background:
+                item.blockedItems > 0
+                  ? "var(--rd)"
+                  : "var(--gn)",
+            }}
+          />
+
+          <div>
+            <div className="font-medium">
+              {item.projectName}
+            </div>
+
             <div
               className="td2"
               style={{
@@ -137,6 +211,8 @@ function BlockedItemsCard({ blockedItems }: { blockedItems: any[] }) {
               >
                 {item.label}
               </div>
+            >
+              {item.label}
             </div>
           </div>
         ))
@@ -173,14 +249,26 @@ function TrendStatusRow({
 }
 
 function HealthTrendCard({ healthTrend }: { healthTrend: any[] }) {
+function HealthTrendCard({
+  healthTrend,
+}: {
+  healthTrend: any[];
+}) {
   return (
     <div className="cd">
-      <div className="ch">Health trend — last 4 weeks</div>
+      <div className="ch">
+        Health trend — last 4 weeks
+      </div>
 
       <div className="wg">
         {healthTrend.map((week) => (
-          <div className="wc" key={week.week}>
-            <div className="wl">{week.week}</div>
+          <div
+            className="wc"
+            key={week.week}
+          >
+            <div className="wl">
+              {week.week}
+            </div>
 
             <TrendStatusRow
               color="var(--gn)"
@@ -265,6 +353,51 @@ export default function ProjectHealth({
       </div>
 
       <HealthTrendCard healthTrend={healthTrend} />
+export default function ProjectHealth() {
+  const {
+    data: kpis = [],
+    isLoading: summaryLoading,
+  } =
+    useProjectHealthSummary();
+
+  const {
+    data: delayedMilestones = [],
+  } = useDelayedMilestones();
+
+  const {
+    data: blockedItems = [],
+  } = useBlockedItems();
+
+  const {
+    data: healthTrend = [],
+  } = useHealthTrend();
+
+  if (summaryLoading) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div
+      className="scr on"
+      id="screen-health"
+    >
+      <KpiRow kpis={kpis} />
+
+      <div className="gr c2">
+        <DelayedMilestonesCard
+          delayedMilestones={
+            delayedMilestones
+          }
+        />
+
+        <BlockedItemsCard
+          blockedItems={blockedItems}
+        />
+      </div>
+
+      <HealthTrendCard
+        healthTrend={healthTrend}
+      />
     </div>
   );
 }
