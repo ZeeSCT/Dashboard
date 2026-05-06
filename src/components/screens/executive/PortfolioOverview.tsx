@@ -195,7 +195,10 @@ function HealthDonut({
   total: number;
   healthCounts: Record<ProjectHealthLabel, number>;
 }) {
-  const radius = 34;
+  const size = 120;
+  const center = size / 2;
+  const radius = 45;
+  const strokeWidth = 18;
   const circumference = 2 * Math.PI * radius;
 
   const segments = [
@@ -225,14 +228,14 @@ function HealthDonut({
   let usedLength = 0;
 
   return (
-    <svg height="90" viewBox="0 0 90 90" width="90">
+    <svg height={size} width={size} viewBox={`0 0 ${size} ${size}`}>
       <circle
-        cx="45"
-        cy="45"
+        cx={center}
+        cy={center}
         fill="none"
         r={radius}
         stroke="#EAF3DE"
-        strokeWidth="14"
+        strokeWidth={strokeWidth}
       />
 
       {segments.map((segment) => {
@@ -245,8 +248,8 @@ function HealthDonut({
         return (
           <circle
             key={segment.label}
-            cx="45"
-            cy="45"
+            cx={center}
+            cy={center}
             fill="none"
             r={radius}
             stroke={segment.color}
@@ -254,19 +257,20 @@ function HealthDonut({
               circumference - segmentLength
             }`}
             strokeDashoffset={-segmentOffset}
-            strokeWidth="14"
-            transform="rotate(-90 45 45)"
+            strokeWidth={strokeWidth}
+            transform={`rotate(-90 ${center} ${center})`}
           />
         );
       })}
 
       <text
         fill="var(--t1)"
-        fontSize="13"
-        fontWeight="500"
+        fontSize="18"
+        fontWeight="700"
         textAnchor="middle"
-        x="45"
-        y="49"
+        dominantBaseline="middle"
+        x={center}
+        y={center}
       >
         {total}
       </text>

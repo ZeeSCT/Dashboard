@@ -7,13 +7,15 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { getAuthToken } from "./auth"; 
+
+
 
 /* ================================== */
 /* CONFIG */
 /* ================================== */
 
-export const API_BASE_URL: string =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api/v1";
+export const API_BASE_URL: string =process.env.NEXT_PUBLIC_API_BASE_URL;
 
 /* ================================== */
 /* TYPES */
@@ -383,12 +385,15 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const token = getAuthToken();
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+   headers: {
+  "Content-Type": "application/json",
+  ...(options.headers || {}),
+  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  },
   });
 
   const text = await response.text();
