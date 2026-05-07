@@ -11,7 +11,7 @@ export default function Sidebar({ active, onChange }: { active: ScreenKey; onCha
       {navigation.map((module) => (
         <ModuleSection key={module.key} module={module} active={active} onChange={onChange} />
       ))}
-      <div className="menu-foot"><strong>Menu check:</strong> 6 main modules, 41 linked screens. Sections can be collapsed or expanded.</div>
+      {/* <div className="menu-foot"><strong>Menu check:</strong> 6 main modules, 41 linked screens. Sections can be collapsed or expanded.</div> */}
     </nav>
   );
 }

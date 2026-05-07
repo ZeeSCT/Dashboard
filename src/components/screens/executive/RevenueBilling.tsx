@@ -1,11 +1,27 @@
+"use client";
+
 import {
-  useRevenueBillingSummary,
+  type PortfolioCategoryCode,
+  type RevenueBillingProject,
+  type RevenueBillingSummary,
   useRevenueBillingProjects,
-  RevenueBillingProject,
+  useRevenueBillingSummary,
 } from "@/lib/api";
 
+type RevenueBillingProps = {
+  selectedPortfolioCategory?: PortfolioCategoryCode;
+};
 
-function formatMoney(value?: number) {
+type Tone = "g" | "w" | "d" | "";
+
+interface KpiItem {
+  label: string;
+  value: string;
+  subtext?: string;
+  tone?: Tone;
+}
+
+function formatMoney(value?: number | null) {
   if (!value) return "AED 0";
 
   const million = value / 1_000_000;
@@ -16,13 +32,29 @@ function formatMoney(value?: number) {
 
   return `AED ${(value / 1_000).toFixed(0)}K`;
 }
-type Tone = "g" | "w" | "d" | "";
 
-interface KpiItem {
-  label: string;
-  value: string;
-  subtext?: string;
-  tone?: Tone;
+function getProgressClass(tone?: string) {
+  if (tone === "g") return "bf bfg";
+  if (tone === "w") return "bf bfa";
+  return "bf bfr";
+}
+
+function getBillingReadyColor(tone?: string) {
+  if (tone === "g") return "var(--gn)";
+  if (tone === "w") return "var(--am)";
+  return "var(--rd)";
+}
+
+function getStatusBadgeClass(tone?: string) {
+  if (tone === "g") return "b bg2";
+  if (tone === "w") return "b ba";
+  return "b bgr";
+}
+
+function getStatusLabel(status: string) {
+  if (status === "READY") return "Ready";
+  if (status === "PARTIAL") return "Partial";
+  return "Not ready";
 }
 
 function KpiCard({ item }: { item: KpiItem }) {
@@ -30,41 +62,41 @@ function KpiCard({ item }: { item: KpiItem }) {
     <div className={`kc ${item.tone ?? ""}`.trim()}>
       <div className="kl">{item.label}</div>
       <div className="kv">{item.value}</div>
-      {item.subtext && <div className="ks">{item.subtext}</div>}
+      {item.subtext ? <div className="ks">{item.subtext}</div> : null}
     </div>
   );
 }
 
-function BillingKpis() {
-  const { data } = useRevenueBillingSummary();
-  const { data: projects } = useRevenueBillingProjects();
-
-
-const activeProjects = projects?.length ?? 0;
-
-  const kpis: KpiItem[] = data
+function BillingKpis({
+  summary,
+  activeProjects,
+}: {
+  summary?: RevenueBillingSummary;
+  activeProjects: number;
+}) {
+  const kpis: KpiItem[] = summary
     ? [
         {
           label: "Contract value",
-          value: formatMoney(data.contractValue),
+          value: formatMoney(summary.contractValue),
           subtext: `${activeProjects} active projects`,
           tone: "g",
         },
         {
           label: "Invoiced to date",
-          value: formatMoney(data.invoicedToDate),
-          subtext: `${data.invoicedPct ?? 0}%`,
+          value: formatMoney(summary.invoicedToDate),
+          subtext: `${summary.invoicedPct ?? 0}%`,
           tone: "g",
         },
         {
           label: "Billing ready now",
-          value: formatMoney(data.billingReadyNow),
-          subtext: `${data.billingReadyProjects ?? 0} projects`,
+          value: formatMoney(summary.billingReadyNow),
+          subtext: `${summary.billingReadyProjects ?? 0} projects`,
           tone: "g",
         },
         {
           label: "Overdue receivables",
-          value: formatMoney(data.overdueReceivables),
+          value: formatMoney(summary.overdueReceivables),
           tone: "d",
         },
       ]
@@ -79,12 +111,7 @@ const activeProjects = projects?.length ?? 0;
   );
 }
 
-function BillingTable() {
-  const { data } = useRevenueBillingProjects();
-
-  const rows: RevenueBillingProject[] = data ?? [];
-  
-
+function BillingTable({ rows }: { rows: RevenueBillingProject[] }) {
   return (
     <div className="cd">
       <div className="ch">Billing readiness by project</div>
@@ -98,90 +125,126 @@ function BillingTable() {
             <th>Progress</th>
             <th>Billing ready</th>
             <th>Status</th>
-            
           </tr>
         </thead>
 
         <tbody>
-  {rows.map((r) => (
-    <tr key={r.projectId}>
-      <td>{r.projectName}</td>
+          {rows.length ? (
+            rows.map((row) => (
+              <tr key={row.projectId}>
+                <td>{row.projectName}</td>
+                <td>{formatMoney(row.contractValue)}</td>
+                <td>{formatMoney(row.invoicedToDate)}</td>
 
-      <td>{formatMoney(r.contractValue)}</td>
+                <td>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                    }}
+                  >
+                    <div className="bw">
+                      <div
+                        className={getProgressClass(row.tone)}
+                        style={{
+                          width: `${row.progressPct}%`,
+                        }}
+                      />
+                    </div>
 
-      <td>{formatMoney(r.invoicedToDate)}</td>
+                    {row.progressPct}%
+                  </div>
+                </td>
 
-      <td>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-          }}
-        >
-          <div className="bw">
-            <div
-              className={`bf ${
-                r.tone === "g"
-                  ? "bfg"
-                  : r.tone === "w"
-                  ? "bfa"
-                  : "bfr"
-              }`}
-              style={{
-                width: `${r.progressPct}%`,
-              }}
-            />
-          </div>
+                <td
+                  style={{
+                    color: getBillingReadyColor(row.tone),
+                    fontWeight: 500,
+                  }}
+                >
+                  {formatMoney(row.billingReadyAmount)}
+                </td>
 
-          {r.progressPct}%
-        </div>
-      </td>
-
-      <td
-        style={{
-          color:
-            r.tone === "g"
-              ? "var(--gn)"
-              : r.tone === "w"
-              ? "var(--am)"
-              : "var(--rd)",
-          fontWeight: 500,
-        }}
-      >
-        {formatMoney(r.billingReadyAmount)}
-      </td>
-
-      <td>
-        <span
-          className={`b ${
-            r.tone === "g"
-              ? "bg2"
-              : r.tone === "w"
-              ? "ba"
-              : "bgr"
-          }`}
-        >
-          {r.status === "READY"
-            ? "Ready"
-            : r.status === "PARTIAL"
-            ? "Partial"
-            : "Not ready"}
-        </span>
-      </td>
-    </tr>
-  ))}
-</tbody>
+                <td>
+                  <span className={getStatusBadgeClass(row.tone)}>
+                    {getStatusLabel(row.status)}
+                  </span>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={6} style={{ color: "var(--t2)", fontSize: 13 }}>
+                No billing data found for this portfolio.
+              </td>
+            </tr>
+          )}
+        </tbody>
       </table>
     </div>
   );
 }
 
-export default function RevenueBilling() {
+export default function RevenueBilling({
+  selectedPortfolioCategory = "all",
+}: RevenueBillingProps) {
+  const category = selectedPortfolioCategory;
+
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    error: summaryErrorData,
+  } = useRevenueBillingSummary(category);
+
+  const {
+    data: projects = [],
+    isLoading: projectsLoading,
+    isError: projectsError,
+    error: projectsErrorData,
+  } = useRevenueBillingProjects(category);
+
+  const isLoading = summaryLoading || projectsLoading;
+  const isError = summaryError || projectsError;
+
+  const error =
+    summaryErrorData instanceof Error
+      ? summaryErrorData
+      : projectsErrorData instanceof Error
+        ? projectsErrorData
+        : null;
+
+  if (isLoading) {
+    return (
+      <div className="scr on" id="screen-billing">
+        <div className="cd">
+          <div className="ch">Revenue & billing</div>
+          <div style={{ color: "var(--t2)", fontSize: 13 }}>
+            Loading revenue and billing data...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="scr on" id="screen-billing">
+        <div className="cd">
+          <div className="ch">Revenue & billing</div>
+          <div style={{ color: "var(--rd)", fontSize: 13 }}>
+            {error?.message ?? "Unable to load revenue and billing data"}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="scr on" id="screen-billing">
-      <BillingKpis />
-      <BillingTable />
+      <BillingKpis summary={summary} activeProjects={projects.length} />
+      <BillingTable rows={projects} />
     </div>
   );
 }

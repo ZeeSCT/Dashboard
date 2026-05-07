@@ -1,4 +1,11 @@
+"use client";
+
 import {
+  type BlockedItem,
+  type DelayedMilestoneItem,
+  type HealthTrendItem,
+  type PortfolioCategoryCode,
+  type ProjectHealthSummaryItem,
   useBlockedItems,
   useDelayedMilestones,
   useHealthTrend,
@@ -7,9 +14,11 @@ import {
 
 type HealthTone = "g" | "w" | "d" | "";
 
-function getTone(
-  status: string
-): HealthTone {
+type ProjectHealthProps = {
+  selectedPortfolioCategory?: PortfolioCategoryCode;
+};
+
+function getTone(status: string): HealthTone {
   switch (status) {
     case "ON_TRACK":
       return "g";
@@ -19,6 +28,7 @@ function getTone(
 
     case "DELAYED":
       return "";
+
     case "CRITICAL":
       return "d";
 
@@ -40,40 +50,23 @@ function getStatusColor(status: string) {
 
     case "CRITICAL":
       return "var(--rd)";
-      
 
     default:
       return "var(--gn)";
   }
 }
 
-function KpiCard({
-  item,
-}: {
-  item: any;
-}) {
+function KpiCard({ item }: { item: ProjectHealthSummaryItem }) {
   return (
-    <div
-      className={`kc ${getTone(
-        item.status
-      )}`.trim()}
-    >
-      <div className="kl">
-        {item.label}
-      </div>
-
-      <div className="kv">
-        {item.value}
-      </div>
-
-      <div className="ks">
-        {item.percentage}%
-      </div>
+    <div className={`kc ${getTone(item.status)}`.trim()}>
+      <div className="kl">{item.label}</div>
+      <div className="kv">{item.value ?? 0}</div>
+      <div className="ks">{item.percentage ?? 0}%</div>
     </div>
   );
 }
 
-function KpiRow({ kpis }: { kpis: any[] }) {
+function KpiRow({ kpis }: { kpis: ProjectHealthSummaryItem[] }) {
   if (!Array.isArray(kpis)) return null;
 
   return (
@@ -88,86 +81,74 @@ function KpiRow({ kpis }: { kpis: any[] }) {
 function DelayedMilestonesCard({
   delayedMilestones,
 }: {
-  delayedMilestones: any[];
+  delayedMilestones: DelayedMilestoneItem[];
 }) {
   return (
     <div className="cd">
-      <div className="ch">
-        Delayed milestones by project
-      </div>
+      <div className="ch">Delayed milestones by project</div>
 
-      {delayedMilestones.map((item) => (
-        <div
-          className="cbr"
-          key={item.projectId}
-        >
-          <span className="cbl">
-            {item.projectName}
-          </span>
+      {delayedMilestones.length ? (
+        delayedMilestones.map((item) => (
+          <div className="cbr" key={item.projectId}>
+            <span className="cbl">{item.projectName}</span>
 
-          <div className="cbt">
-            <div
-              className="cbi"
-              style={{
-                width: `${item.widthPct}%`,
-                background:
-                  getStatusColor(
-                    item.status
-                  ),
-                color: "#fff",
-              }}
-            >
-              {item.label}
+            <div className="cbt">
+              <div
+                className="cbi"
+                style={{
+                  width: `${item.widthPct}%`,
+                  background: getStatusColor(item.status),
+                  color: "#fff",
+                }}
+              >
+                {item.label}
+              </div>
             </div>
           </div>
+        ))
+      ) : (
+        <div style={{ color: "var(--t2)", fontSize: 13 }}>
+          No delayed milestones for this portfolio.
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
-function BlockedItemsCard({
-  blockedItems,
-}: {
-  blockedItems: any[];
-}) {
+function BlockedItemsCard({ blockedItems }: { blockedItems: BlockedItem[] }) {
   return (
     <div className="cd">
-      <div className="ch">
-        Blocked items by project
-      </div>
+      <div className="ch">Blocked items by project</div>
 
-      {blockedItems.map((item) => (
-        <div
-          className="tr2"
-          key={item.projectId}
-        >
-          <div
-            className="td2"
-            style={{
-              background:
-                item.blockedItems > 0
-                  ? "var(--rd)"
-                  : "var(--gn)",
-            }}
-          />
-
-          <div>
-            <div className="font-medium">
-              {item.projectName}
-            </div>
-
+      {blockedItems.length ? (
+        blockedItems.map((item) => (
+          <div className="tr2" key={item.projectId}>
             <div
+              className="td2"
               style={{
-                color: "var(--t2)",
-                fontSize: 12,
+                background: item.blockedItems > 0 ? "var(--rd)" : "var(--gn)",
               }}
-            >
-              {item.label}
+            />
+
+            <div>
+              <div style={{ fontWeight: 500 }}>{item.projectName}</div>
+
+              <div
+                style={{
+                  color: "var(--t2)",
+                  fontSize: 12,
+                }}
+              >
+                {item.label}
+              </div>
             </div>
           </div>
+        ))
+      ) : (
+        <div style={{ color: "var(--t2)", fontSize: 13 }}>
+          No blocked items for this portfolio.
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -195,26 +176,15 @@ function TrendStatusRow({
   );
 }
 
-function HealthTrendCard({
-  healthTrend,
-}: {
-  healthTrend: any[];
-}) {
+function HealthTrendCard({ healthTrend }: { healthTrend: HealthTrendItem[] }) {
   return (
     <div className="cd">
-      <div className="ch">
-        Health trend — last 4 weeks
-      </div>
+      <div className="ch">Health trend — last 4 weeks</div>
 
       <div className="wg">
         {healthTrend.map((week) => (
-          <div
-            className="wc"
-            key={week.week}
-          >
-            <div className="wl">
-              {week.week}
-            </div>
+          <div className="wc" key={week.week}>
+            <div className="wl">{week.week}</div>
 
             <TrendStatusRow
               color="var(--gn)"
@@ -246,51 +216,82 @@ function HealthTrendCard({
   );
 }
 
-export default function ProjectHealth() {
+export default function ProjectHealth({
+  selectedPortfolioCategory = "all",
+}: ProjectHealthProps) {
+  const category = selectedPortfolioCategory;
+
   const {
     data: kpis = [],
     isLoading: summaryLoading,
-  } =
-    useProjectHealthSummary();
+    isError: summaryError,
+    error: summaryErrorData,
+  } = useProjectHealthSummary(category);
 
   const {
     data: delayedMilestones = [],
-  } = useDelayedMilestones();
+    isLoading: milestonesLoading,
+    isError: milestonesError,
+    error: milestonesErrorData,
+  } = useDelayedMilestones(category);
 
   const {
     data: blockedItems = [],
-  } = useBlockedItems();
+    isLoading: blockedLoading,
+    isError: blockedError,
+    error: blockedErrorData,
+  } = useBlockedItems(category);
 
-  const {
-    data: healthTrend = [],
-  } = useHealthTrend();
+  const { data: healthTrend = [] } = useHealthTrend();
 
-  if (summaryLoading) {
-    return <div>Loading...</div>;
+  const isLoading = summaryLoading || milestonesLoading || blockedLoading;
+  const isError = summaryError || milestonesError || blockedError;
+
+  const error =
+    summaryErrorData instanceof Error
+      ? summaryErrorData
+      : milestonesErrorData instanceof Error
+        ? milestonesErrorData
+        : blockedErrorData instanceof Error
+          ? blockedErrorData
+          : null;
+
+  if (isLoading) {
+    return (
+      <div className="scr on" id="screen-health">
+        <div className="cd">
+          <div className="ch">Project health</div>
+          <div style={{ color: "var(--t2)", fontSize: 13 }}>
+            Loading project health...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="scr on" id="screen-health">
+        <div className="cd">
+          <div className="ch">Project health</div>
+          <div style={{ color: "var(--rd)", fontSize: 13 }}>
+            {error?.message ?? "Unable to load project health"}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div
-      className="scr on"
-      id="screen-health"
-    >
+    <div className="scr on" id="screen-health">
       <KpiRow kpis={kpis} />
 
       <div className="gr c2">
-        <DelayedMilestonesCard
-          delayedMilestones={
-            delayedMilestones
-          }
-        />
-
-        <BlockedItemsCard
-          blockedItems={blockedItems}
-        />
+        <DelayedMilestonesCard delayedMilestones={delayedMilestones} />
+        <BlockedItemsCard blockedItems={blockedItems} />
       </div>
 
-      <HealthTrendCard
-        healthTrend={healthTrend}
-      />
+      <HealthTrendCard healthTrend={healthTrend} />
     </div>
   );
 }
