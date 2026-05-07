@@ -383,29 +383,33 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("accessToken") ||
+        localStorage.getItem("token")
+      : null;
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+    headers,
   });
 
   const text = await response.text();
 
-  let data: unknown;
-
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = text;
-  }
+  const data = text ? JSON.parse(text) : {};
 
   if (!response.ok) {
-    const err = data as any;
-
     throw new ApiError(
-      err?.message || err?.error || "API request failed",
+      data?.message || "API request failed",
       response.status,
       data
     );
